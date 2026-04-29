@@ -1,15 +1,24 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
+import Link from 'next/link'
 import Header from '@/components/layout/header'
 import { CandidateStatusBadge, ScoreBadge } from '@/components/ui/status-badge'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { CANDIDATE_STATUS_LABELS } from '@/types'
 import {
-  Loader2, Mail, Phone, MapPin, Linkedin, FileText, Sparkles,
-  Calendar, ChevronRight, ExternalLink, User, MessageSquare,
+  Loader2, Mail, Phone, MapPin, Linkedin, FileText, Sparkles, Info,
 } from 'lucide-react'
+
+type Comm = {
+  id: string
+  subject: string
+  body?: string
+  status: string
+  sentAt?: string
+  createdAt: string
+}
 
 type Candidate = {
   id: string
@@ -29,7 +38,7 @@ type Candidate = {
   job: { id: string; title: string; location?: string; salaryMin?: number; salaryMax?: number; currency: string; interviewQuestions: string[] }
   interviews: { id: string; scheduledAt: string; type: string; status: string; feedback?: string; score?: number }[]
   statusHistory: { toStatus: string; reason?: string; changedBy?: string; createdAt: string }[]
-  communications: { subject: string; sentAt?: string; approved: boolean; createdAt: string }[]
+  communications: Comm[]
 }
 
 const STATUSES = [
@@ -38,17 +47,27 @@ const STATUSES = [
   'OFFER_SENT', 'OFFER_ACCEPTED', 'ONBOARDING',
 ]
 
+const COMM_STATUS_COLORS: Record<string, string> = {
+  sent: 'bg-green-100 text-green-700',
+  approved: 'bg-blue-100 text-blue-700',
+  failed: 'bg-red-100 text-red-700',
+  pending_approval: 'bg-yellow-100 text-yellow-700',
+  draft: 'bg-gray-100 text-gray-600',
+}
+
 export default function CandidateDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const router = useRouter()
   const [candidate, setCandidate] = useState<Candidate | null>(null)
   const [loading, setLoading] = useState(true)
   const [screening, setScreening] = useState(false)
   const [statusUpdate, setStatusUpdate] = useState({ status: '', reason: '' })
   const [tab, setTab] = useState<'overview' | 'screening' | 'interviews' | 'comms' | 'history'>('overview')
-  const [emailForm, setEmailForm] = useState({ type: 'application_received', subject: '', body: '' })
+  const [emailForm, setEmailForm] = useState({ type: 'application_received', subject: '', body: '', commId: '' })
   const [emailLoading, setEmailLoading] = useState(false)
+  const [sendingEmail, setSendingEmail] = useState(false)
   const [interviewForm, setInterviewForm] = useState({ scheduledAt: '', type: 'in-person', interviewers: '', location: '', meetingLink: '' })
+  const [notes, setNotes] = useState('')
+  const [savingNotes, setSavingNotes] = useState(false)
 
   useEffect(() => { fetchCandidate() }, [id])
 
@@ -59,6 +78,7 @@ export default function CandidateDetailPage() {
       const data = await res.json()
       setCandidate(data.candidate)
       setStatusUpdate((s) => ({ ...s, status: data.candidate.status }))
+      setNotes(data.candidate.notes || '')
     } finally {
       setLoading(false)
     }
@@ -90,14 +110,50 @@ export default function CandidateDetailPage() {
       const res = await fetch('/api/communications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ candidateId: id, type: emailForm.type }),
+        body: JSON.stringify({ candidateId: id, type: emailForm.type, generateAI: true }),
       })
       const data = await res.json()
       if (data.comm) {
-        setEmailForm((f) => ({ ...f, subject: data.comm.subject, body: data.comm.body }))
+        setEmailForm((f) => ({ ...f, subject: data.comm.subject, body: data.comm.body, commId: data.comm.id }))
+        await fetchCandidate()
       }
     } finally {
       setEmailLoading(false)
+    }
+  }
+
+  async function saveNotes() {
+    setSavingNotes(true)
+    try {
+      await fetch(`/api/candidates/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes }),
+      })
+    } finally {
+      setSavingNotes(false)
+    }
+  }
+
+  async function sendEmailNow() {
+    if (!emailForm.commId) return
+    setSendingEmail(true)
+    try {
+      const res = await fetch(`/api/communications/${emailForm.commId}/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sendNow: true }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        alert('Email sent successfully!')
+        setEmailForm({ type: 'application_received', subject: '', body: '', commId: '' })
+        await fetchCandidate()
+      } else {
+        alert(data.error || 'Failed to send email')
+      }
+    } finally {
+      setSendingEmail(false)
     }
   }
 
@@ -121,6 +177,7 @@ export default function CandidateDetailPage() {
     <main className="flex-1">
       <Header title={`${candidate.firstName} ${candidate.lastName}`} subtitle={`Applied for ${candidate.job.title}`} />
       <div className="p-6 space-y-5">
+
         {/* Header card */}
         <div className="card p-6 flex flex-wrap items-start gap-5">
           <div className="w-14 h-14 bg-blue-100 rounded-2xl flex items-center justify-center flex-shrink-0">
@@ -197,8 +254,20 @@ export default function CandidateDetailPage() {
             </div>
             <div className="card p-5">
               <h3 className="font-semibold text-gray-800 mb-3">Notes</h3>
-              <textarea className="input h-32 text-sm" placeholder="Add HR notes…" defaultValue={candidate.notes || ''} />
-              <button className="btn-secondary mt-2 text-xs">Save notes</button>
+              <textarea
+                className="input h-32 text-sm"
+                placeholder="Add HR notes…"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              />
+              <button
+                onClick={saveNotes}
+                disabled={savingNotes}
+                className="btn-secondary mt-2 text-xs flex items-center gap-1.5"
+              >
+                {savingNotes && <Loader2 className="w-3 h-3 animate-spin" />}
+                {savingNotes ? 'Saving…' : 'Save notes'}
+              </button>
             </div>
           </div>
         )}
@@ -301,36 +370,80 @@ export default function CandidateDetailPage() {
         )}
 
         {tab === 'comms' && (
-          <div className="card p-5 space-y-4">
-            <h3 className="font-semibold">Generate Email</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="label">Email type</label>
-                <select className="select" value={emailForm.type} onChange={(e) => setEmailForm((f) => ({ ...f, type: e.target.value }))}>
-                  <option value="application_received">Application Received</option>
-                  <option value="rejected">Rejection</option>
-                  <option value="phone_interview">Phone Interview Invite</option>
-                  <option value="interview_scheduled">Interview Scheduled</option>
-                  <option value="offer">Offer Letter</option>
-                  <option value="onboarding">Onboarding Instructions</option>
-                </select>
-              </div>
-              <div className="flex items-end">
-                <button onClick={generateEmail} disabled={emailLoading} className="btn-primary w-full">
-                  {emailLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                  Generate Email
-                </button>
+          <div className="space-y-4">
+            {/* Workflow explanation */}
+            <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-100 rounded-xl text-sm">
+              <Info className="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-500" />
+              <div className="text-blue-700">
+                <p className="font-medium">How email communications work</p>
+                <p className="text-blue-600 mt-0.5">
+                  AI-generated emails are saved as <strong>drafts</strong> — they are <strong>not sent automatically</strong>.
+                  You can approve and send directly here, or review all pending emails in{' '}
+                  <Link href="/communications" className="underline font-medium">Communications</Link>.
+                </p>
               </div>
             </div>
-            {emailForm.subject && (
-              <>
-                <div><label className="label">Subject</label><input className="input" value={emailForm.subject} onChange={(e) => setEmailForm((f) => ({ ...f, subject: e.target.value }))} /></div>
-                <div><label className="label">Body</label><textarea className="input" rows={8} value={emailForm.body} onChange={(e) => setEmailForm((f) => ({ ...f, body: e.target.value }))} /></div>
-                <div className="flex gap-3">
-                  <button className="btn-secondary text-sm">Save as Draft</button>
-                  <button className="btn-primary text-sm"><Mail className="w-3.5 h-3.5" /> Send Email</button>
+
+            {/* Generate email */}
+            <div className="card p-5 space-y-4">
+              <h3 className="font-semibold">Generate Email</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label">Email type</label>
+                  <select className="select" value={emailForm.type} onChange={(e) => setEmailForm((f) => ({ ...f, type: e.target.value }))}>
+                    <option value="application_received">Application Received</option>
+                    <option value="rejected">Rejection</option>
+                    <option value="phone_interview">Phone Interview Invite</option>
+                    <option value="interview_scheduled">Interview Scheduled</option>
+                    <option value="offer">Offer Letter</option>
+                    <option value="onboarding">Onboarding Instructions</option>
+                  </select>
                 </div>
-              </>
+                <div className="flex items-end">
+                  <button onClick={generateEmail} disabled={emailLoading} className="btn-primary w-full">
+                    {emailLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                    {emailLoading ? 'Generating…' : 'Generate Email'}
+                  </button>
+                </div>
+              </div>
+              {emailForm.subject && (
+                <>
+                  <div><label className="label">Subject</label><input className="input" value={emailForm.subject} onChange={(e) => setEmailForm((f) => ({ ...f, subject: e.target.value }))} /></div>
+                  <div><label className="label">Body</label><textarea className="input" rows={8} value={emailForm.body} onChange={(e) => setEmailForm((f) => ({ ...f, body: e.target.value }))} /></div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-green-600 font-medium">✓ Saved as draft</span>
+                    <div className="ml-auto flex gap-3">
+                      <Link href="/communications" className="btn-secondary text-sm">
+                        Review in Communications
+                      </Link>
+                      <button onClick={sendEmailNow} disabled={sendingEmail} className="btn-primary text-sm">
+                        {sendingEmail ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
+                        {sendingEmail ? 'Sending…' : 'Approve & Send'}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Communication history */}
+            {candidate.communications.length > 0 && (
+              <div className="card overflow-hidden">
+                <p className="px-5 py-3 text-sm font-semibold text-gray-700 border-b border-gray-100">Communication History</p>
+                <div className="divide-y divide-gray-50">
+                  {candidate.communications.map((c) => (
+                    <div key={c.id} className="px-5 py-3 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{c.subject}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{formatDate(c.createdAt)}</p>
+                      </div>
+                      <span className={`badge ${COMM_STATUS_COLORS[c.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                        {c.status.replace('_', ' ')}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
         )}
@@ -344,7 +457,7 @@ export default function CandidateDetailPage() {
                 <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0" />
                 <div className="flex-1">
                   <p className="text-sm font-medium text-gray-900">
-                    {h.fromStatus ? `${CANDIDATE_STATUS_LABELS[h.fromStatus as never]} → ` : ''}{CANDIDATE_STATUS_LABELS[h.toStatus as never]}
+                    {CANDIDATE_STATUS_LABELS[h.toStatus as never]}
                   </p>
                   {h.reason && <p className="text-xs text-gray-500 mt-0.5">{h.reason}</p>}
                 </div>
@@ -356,8 +469,4 @@ export default function CandidateDetailPage() {
       </div>
     </main>
   )
-}
-
-function Link({ href, className, children }: { href: string; className?: string; children: React.ReactNode }) {
-  return <a href={href} className={className}>{children}</a>
 }

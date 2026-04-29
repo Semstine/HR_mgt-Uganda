@@ -107,7 +107,7 @@ export default async function CandidatesPage({
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {candidates.map((c) => (
-                    <tr key={c.id} className="hover:bg-gray-50">
+                    <tr key={c.id} className="hover:bg-gray-50 relative cursor-pointer">
                       <td className="table-cell">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
@@ -125,7 +125,7 @@ export default async function CandidatesPage({
                       <td className="table-cell text-gray-400">{formatDate(c.applicationDate)}</td>
                       <td className="table-cell">
                         <Link href={`/recruitment/candidates/${c.id}`}
-                          className="text-sm text-blue-600 hover:underline font-medium">
+                          className="text-sm text-blue-600 hover:underline font-medium after:absolute after:inset-0 after:content-['']">
                           View →
                         </Link>
                       </td>
