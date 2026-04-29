@@ -64,8 +64,8 @@ export async function POST(req: NextRequest) {
   await prisma.onboarding.create({
     data: {
       employeeId: employee.id,
-      tasks: JSON.stringify(DEFAULT_ONBOARDING_TASKS),
-      completedTasks: JSON.stringify([]),
+      tasks: DEFAULT_ONBOARDING_TASKS as never,
+      completedTasks: [],
       status: 'pending',
     },
   })

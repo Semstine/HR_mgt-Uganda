@@ -3,18 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
-
-// UserRole: SUPER_ADMIN | COMPANY_ADMIN | HR_MANAGER | HR_OFFICER | DEPARTMENT_MANAGER | SUPERVISOR | EMPLOYEE | CANDIDATE
-// JobStatus: DRAFT | ACTIVE | PAUSED | CLOSED
-// EmploymentType: FULL_TIME | PART_TIME | CONTRACT | INTERNSHIP | CONSULTANT
-// CandidateStatus: RECEIVED | UNDER_REVIEW | SHORTLISTED | REJECTED | PHONE_INTERVIEW_INVITED | INTERVIEW_SCHEDULED | FINAL_INTERVIEW | OFFER_SENT | OFFER_ACCEPTED | ONBOARDING | EMPLOYEE_ACTIVE | ARCHIVED
-// ReviewCycle: MONTHLY | QUARTERLY | SEMI_ANNUAL | ANNUAL
-// ReviewStatus: PENDING | IN_PROGRESS | COMPLETED
-// CaseType: COMPLAINT | DISCIPLINARY | WARNING | PERFORMANCE_IMPROVEMENT | CONFLICT_RESOLUTION | TERMINATION
-// CaseStatus: OPEN | IN_PROGRESS | RESOLVED | CLOSED
 
 model Company {
   id               String   @id @default(cuid())
@@ -30,25 +21,30 @@ model Company {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  users        User[]
-  departments  Department[]
-  jobs         Job[]
-  employees    Employee[]
-  settings     CompanySettings?
+  users       User[]
+  departments Department[]
+  jobs        Job[]
+  employees   Employee[]
+  settings    CompanySettings?
 }
 
 model CompanySettings {
-  id             String   @id @default(cuid())
-  companyId      String   @unique
-  company        Company  @relation(fields: [companyId], references: [id])
-  country        String   @default("Uganda")
-  currency       String   @default("UGX")
-  currencySymbol String   @default("UGX")
-  timezone       String   @default("Africa/Kampala")
-  nssfEnabled    Boolean  @default(true)
-  payeEnabled    Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id              String   @id @default(cuid())
+  companyId       String   @unique
+  company         Company  @relation(fields: [companyId], references: [id])
+  country         String   @default("Uganda")
+  currency        String   @default("UGX")
+  currencySymbol  String   @default("UGX")
+  timezone        String   @default("Africa/Kampala")
+  nssfEnabled     Boolean  @default(true)
+  payeEnabled     Boolean  @default(true)
+  probationMonths Int      @default(3)
+  annualLeaveDays Int      @default(21)
+  sickLeaveDays   Int      @default(10)
+  maternityLeave  Int      @default(60)
+  paternityLeave  Int      @default(4)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model Department {
@@ -80,38 +76,40 @@ model User {
 }
 
 model Job {
-  id                 String   @id @default(cuid())
+  id                 String    @id @default(cuid())
   title              String
   departmentId       String?
   department         Department? @relation(fields: [departmentId], references: [id])
   companyId          String
-  company            Company  @relation(fields: [companyId], references: [id])
+  company            Company   @relation(fields: [companyId], references: [id])
   location           String?
-  employmentType     String   @default("FULL_TIME")
+  employmentType     String    @default("FULL_TIME")
   description        String?
   responsibilities   String?
-  requiredSkills     String   @default("[]")
-  preferredSkills    String   @default("[]")
+  requiredSkills     String[]  @default([])
+  preferredSkills    String[]  @default([])
   experienceLevel    String?
   education          String?
   salaryMin          Float?
   salaryMax          Float?
-  currency           String   @default("UGX")
+  currency           String    @default("UGX")
   deadline           DateTime?
-  status             String   @default("DRAFT")
-  screeningKeywords  String   @default("[]")
-  scoringCriteria    String?
-  interviewQuestions String   @default("[]")
-  aiApproved         Boolean  @default(false)
-  publicSlug         String?  @unique
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  status             String    @default("DRAFT")
+  screeningKeywords  String[]  @default([])
+  scoringCriteria    Json?
+  interviewQuestions String[]  @default([])
+  aiApproved         Boolean   @default(false)
+  publicSlug         String?   @unique
+  embedCode          String?
+  hiringManagerId    String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   candidates Candidate[]
 }
 
 model Candidate {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   firstName       String
   lastName        String
   email           String
@@ -119,97 +117,129 @@ model Candidate {
   location        String?
   linkedIn        String?
   jobId           String
-  job             Job      @relation(fields: [jobId], references: [id])
+  job             Job       @relation(fields: [jobId], references: [id])
   resumeUrl       String?
   resumeText      String?
-  resumeParsed    String?
-  status          String   @default("RECEIVED")
+  resumeParsed    Json?
+  status          String    @default("RECEIVED")
   screeningScore  Float?
   screeningNotes  String?
-  screeningData   String?
-  applicationDate DateTime @default(now())
+  screeningData   Json?
+  applicationDate DateTime  @default(now())
   source          String?
   notes           String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  // Parsed resume fields
+  parsedName      String?
+  parsedEmail     String?
+  parsedPhone     String?
+  parsedLocation  String?
+  parsedEducation String?
+  parsedExperience String?
+  parsedSkills    String[]  @default([])
+  parsedJobTitles String[]  @default([])
+  parsedEmployers String[]  @default([])
+  parsedYearsExp  Float?
+  certifications  String[]  @default([])
+  // Duplicate detection
+  isDuplicate     Boolean   @default(false)
+  duplicateOf     String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   interviews     Interview[]
   communications CandidateComm[]
   statusHistory  CandidateStatusHistory[]
   offer          Offer?
   employee       Employee?
+  documents      FileUpload[]
 }
 
 model CandidateStatusHistory {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   candidateId String
   candidate   Candidate @relation(fields: [candidateId], references: [id])
   fromStatus  String?
   toStatus    String
   reason      String?
   changedBy   String?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
 }
 
 model Interview {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   candidateId  String
   candidate    Candidate @relation(fields: [candidateId], references: [id])
   scheduledAt  DateTime
-  type         String   @default("in-person")
-  interviewers String   @default("[]")
+  type         String    @default("in-person")
+  interviewers String[]  @default([])
   location     String?
   meetingLink  String?
   notes        String?
   feedback     String?
   score        Float?
-  status       String   @default("scheduled")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  status       String    @default("scheduled")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 }
 
 model CandidateComm {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   candidateId String
   candidate   Candidate @relation(fields: [candidateId], references: [id])
   subject     String
   body        String
-  type        String   @default("email")
+  type        String    @default("email")
+  template    String?
+  // Approval workflow
+  status      String    @default("draft") // draft | pending_approval | approved | sent | failed
   sentBy      String?
   sentAt      DateTime?
-  approved    Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  approvedBy  String?
+  approvedAt  DateTime?
+  failReason  String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model Offer {
-  id              String   @id @default(cuid())
-  candidateId     String   @unique
-  candidate       Candidate @relation(fields: [candidateId], references: [id])
-  role            String
-  salary          Float
-  currency        String   @default("UGX")
-  startDate       DateTime
-  probationMonths Int      @default(3)
-  supervisor      String?
-  workLocation    String?
-  benefits        String?
-  terms           String?
-  letterUrl       String?
-  signedUrl       String?
-  status          String   @default("draft")
-  sentAt          DateTime?
-  signedAt        DateTime?
-  expiresAt       DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id               String    @id @default(cuid())
+  candidateId      String    @unique
+  candidate        Candidate @relation(fields: [candidateId], references: [id])
+  role             String
+  salary           Float
+  currency         String    @default("UGX")
+  startDate        DateTime
+  probationMonths  Int       @default(3)
+  supervisor       String?
+  workLocation     String?
+  benefits         String?
+  terms            String?
+  letterUrl        String?
+  signedUrl        String?
+  status           String    @default("draft") // draft | pending_hr_approval | approved | sent | signed | declined | expired
+  sentAt           DateTime?
+  signedAt         DateTime?
+  expiresAt        DateTime?
+  // Digital signing
+  signatureToken   String?   @unique
+  signedByName     String?
+  signatureData    String?
+  signatureIp      String?
+  signatureDevice  String?
+  // HR approval
+  hrApprovedBy     String?
+  hrApprovedAt     DateTime?
+  hrApprovalStatus String    @default("pending") // pending | approved | rejected
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 }
 
 model Employee {
-  id               String   @id @default(cuid())
-  candidateId      String?  @unique
+  id               String    @id @default(cuid())
+  candidateId      String?   @unique
   candidate        Candidate? @relation(fields: [candidateId], references: [id])
   companyId        String
-  company          Company  @relation(fields: [companyId], references: [id])
+  company          Company   @relation(fields: [companyId], references: [id])
   departmentId     String?
   department       Department? @relation(fields: [departmentId], references: [id])
   employeeNumber   String?
@@ -222,50 +252,71 @@ model Employee {
   nationality      String?
   address          String?
   jobTitle         String
-  employmentType   String   @default("FULL_TIME")
+  employmentType   String    @default("FULL_TIME")
   startDate        DateTime
   endDate          DateTime?
   supervisorId     String?
   salary           Float?
-  currency         String   @default("UGX")
+  currency         String    @default("UGX")
   paymentFrequency String?
-  allowances       String?
-  benefits         String?
-  deductions       String?
+  allowances       Json?
+  benefits         Json?
+  deductions       Json?
+  // Uganda compliance fields
   nssfNumber       String?
+  nssfRate         Float?    @default(10)
   tinNumber        String?
+  payeRate         Float?
   bankName         String?
   bankAccount      String?
-  annualLeave      Float    @default(21)
-  sickLeave        Float    @default(10)
-  isActive         Boolean  @default(true)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  bankBranch       String?
+  mobileMoneyNumber String?
+  mobileMoneyProvider String?
+  // Leave
+  annualLeave      Float     @default(21)
+  sickLeave        Float     @default(10)
+  maternityLeave   Float?
+  paternityLeave   Float?
+  // Contract / compliance
+  contractType     String?   // permanent | fixed_term | casual | probationary
+  contractEndDate  DateTime?
+  probationMonths  Int?      @default(3)
+  probationEndDate DateTime?
+  workPermitNumber String?
+  workPermitExpiry DateTime?
+  // Status
+  isActive         Boolean   @default(true)
+  terminationReason String?
+  terminationDate  DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
-  onboarding         Onboarding?
-  documents          EmployeeDocument[]
-  performanceReviews PerformanceReview[]
-  caseFiles          CaseFile[]
-  leaveRecords       LeaveRecord[]
-  salaryHistory      SalaryHistory[]
+  onboarding          Onboarding?
+  documents           EmployeeDocument[]
+  performanceReviews  PerformanceReview[]
+  caseFiles           CaseFile[]
+  leaveRecords        LeaveRecord[]
+  salaryHistory       SalaryHistory[]
+  compensationChanges CompensationChange[]
+  complianceRecords   ComplianceRecord[]
 }
 
 model Onboarding {
-  id                       String   @id @default(cuid())
-  employeeId               String   @unique
-  employee                 Employee @relation(fields: [employeeId], references: [id])
-  tasks                    String?
-  completedTasks           String   @default("[]")
-  personalInfoComplete     Boolean  @default(false)
-  emergencyContactComplete Boolean  @default(false)
-  bankDetailsComplete      Boolean  @default(false)
-  contractSigned           Boolean  @default(false)
-  policiesAcknowledged     Boolean  @default(false)
-  orientationComplete      Boolean  @default(false)
-  status                   String   @default("pending")
+  id                       String    @id @default(cuid())
+  employeeId               String    @unique
+  employee                 Employee  @relation(fields: [employeeId], references: [id])
+  tasks                    Json?
+  completedTasks           String[]  @default([])
+  personalInfoComplete     Boolean   @default(false)
+  emergencyContactComplete Boolean   @default(false)
+  bankDetailsComplete      Boolean   @default(false)
+  contractSigned           Boolean   @default(false)
+  policiesAcknowledged     Boolean   @default(false)
+  orientationComplete      Boolean   @default(false)
+  status                   String    @default("pending")
   completedAt              DateTime?
-  createdAt                DateTime @default(now())
-  updatedAt                DateTime @updatedAt
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
 }
 
 model EmployeeDocument {
@@ -275,49 +326,70 @@ model EmployeeDocument {
   name       String
   type       String
   url        String
+  storageKey String?
   uploadedBy String?
   createdAt  DateTime @default(now())
 }
 
+model FileUpload {
+  id           String    @id @default(cuid())
+  companyId    String?
+  entityType   String    // candidate | employee | offer | company
+  entityId     String
+  name         String
+  originalName String
+  mimeType     String
+  size         Int
+  storageKey   String
+  storageUrl   String?
+  bucket       String?
+  provider     String    @default("local") // local | s3 | supabase | cloudinary
+  uploadedBy   String?
+  isPrivate    Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+
+  candidate Candidate? @relation(fields: [entityId], references: [id], map: "FileUpload_candidateId_fkey")
+}
+
 model PerformanceReview {
-  id                   String   @id @default(cuid())
+  id                   String    @id @default(cuid())
   employeeId           String
-  employee             Employee @relation(fields: [employeeId], references: [id])
+  employee             Employee  @relation(fields: [employeeId], references: [id])
   cycle                String
   period               String
-  status               String   @default("PENDING")
-  selfEvaluation       String?
-  supervisorEvaluation String?
-  goals                String?
+  status               String    @default("PENDING")
+  selfEvaluation       Json?
+  supervisorEvaluation Json?
+  goals                Json?
   goalsScore           Float?
   skillsScore          Float?
   overallScore         Float?
   comments             String?
   aiSummary            String?
   recommendations      String?
-  promotionRecommended Boolean  @default(false)
+  promotionRecommended Boolean   @default(false)
   trainingRecommended  String?
   improvementPlan      String?
   dueDate              DateTime
   completedAt          DateTime?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 }
 
 model CaseFile {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   employeeId  String
-  employee    Employee @relation(fields: [employeeId], references: [id])
+  employee    Employee  @relation(fields: [employeeId], references: [id])
   caseType    String
   description String
-  dateOpened  DateTime @default(now())
-  status      String   @default("OPEN")
+  dateOpened  DateTime  @default(now())
+  status      String    @default("OPEN")
   notes       String?
   resolution  String?
-  documents   String   @default("[]")
+  documents   String[]  @default([])
   resolvedAt  DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model LeaveRecord {
@@ -328,10 +400,12 @@ model LeaveRecord {
   startDate  DateTime
   endDate    DateTime
   days       Int
-  status     String   @default("pending")
+  status     String   @default("pending") // pending | approved | rejected | cancelled
   reason     String?
   approvedBy String?
+  approvedAt DateTime?
   createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 model SalaryHistory {
@@ -342,7 +416,44 @@ model SalaryHistory {
   currency      String   @default("UGX")
   effectiveDate DateTime
   reason        String?
+  approvedBy    String?
   createdAt     DateTime @default(now())
+}
+
+model CompensationChange {
+  id            String    @id @default(cuid())
+  employeeId    String
+  employee      Employee  @relation(fields: [employeeId], references: [id])
+  changeType    String    // salary | allowance | benefit | deduction
+  description   String?
+  fromAmount    Float?
+  toAmount      Float
+  currency      String    @default("UGX")
+  effectiveDate DateTime
+  reason        String
+  requestedBy   String?
+  approvedBy    String?
+  approvedAt    DateTime?
+  status        String    @default("pending") // pending | approved | rejected | applied
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model ComplianceRecord {
+  id          String    @id @default(cuid())
+  companyId   String
+  employeeId  String?
+  employee    Employee? @relation(fields: [employeeId], references: [id])
+  type        String    // nssf | paye | leave_policy | contract | work_permit | disciplinary | probation
+  title       String
+  description String?
+  dueDate     DateTime?
+  status      String    @default("pending") // pending | compliant | overdue | waived
+  data        Json?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model AuditLog {
@@ -352,7 +463,7 @@ model AuditLog {
   action     String
   resource   String
   resourceId String?
-  details    String?
+  details    Json?
   ipAddress  String?
   createdAt  DateTime @default(now())
 }

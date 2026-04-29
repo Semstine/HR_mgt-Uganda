@@ -36,13 +36,15 @@ export async function POST(req: NextRequest) {
     responsibilities, requiredSkills = [], preferredSkills = [], experienceLevel,
     education, salaryMin, salaryMax, deadline, status = 'DRAFT',
     screeningKeywords = [], scoringCriteria, interviewQuestions = [], aiApproved = false,
+    hiringManagerId,
   } = body
 
   if (!title) return NextResponse.json({ error: 'Job title is required' }, { status: 400 })
 
   const slug = `${slugify(title)}-${uuid().slice(0, 8)}`
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+  const embedCode = `<a href="${appUrl}/apply/${slug}" target="_blank" style="display:inline-block;padding:10px 20px;background:#2563eb;color:#fff;border-radius:6px;text-decoration:none;font-family:sans-serif;">Apply for ${title}</a>`
 
-  const j = (v: string[]) => JSON.stringify(v)
   const job = await prisma.job.create({
     data: {
       title,
@@ -52,19 +54,21 @@ export async function POST(req: NextRequest) {
       employmentType,
       description,
       responsibilities,
-      requiredSkills: j(requiredSkills),
-      preferredSkills: j(preferredSkills),
+      requiredSkills,
+      preferredSkills,
       experienceLevel,
       education,
       salaryMin,
       salaryMax,
       deadline: deadline ? new Date(deadline) : null,
       status,
-      screeningKeywords: j(screeningKeywords),
-      scoringCriteria: scoringCriteria ? JSON.stringify(scoringCriteria) : null,
-      interviewQuestions: j(interviewQuestions),
+      screeningKeywords,
+      scoringCriteria: scoringCriteria ?? null,
+      interviewQuestions,
       aiApproved,
       publicSlug: slug,
+      embedCode,
+      hiringManagerId: hiringManagerId || null,
     },
   })
 

@@ -6,6 +6,12 @@ export type ReviewCycle = 'MONTHLY' | 'QUARTERLY' | 'SEMI_ANNUAL' | 'ANNUAL'
 export type ReviewStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED'
 export type CaseType = 'COMPLAINT' | 'DISCIPLINARY' | 'WARNING' | 'PERFORMANCE_IMPROVEMENT' | 'CONFLICT_RESOLUTION' | 'TERMINATION'
 export type CaseStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED'
+export type EmailCommStatus = 'draft' | 'pending_approval' | 'approved' | 'sent' | 'failed'
+export type OfferStatus = 'draft' | 'pending_hr_approval' | 'approved' | 'sent' | 'signed' | 'declined' | 'expired'
+export type CompensationChangeType = 'salary' | 'allowance' | 'benefit' | 'deduction'
+export type ComplianceType = 'nssf' | 'paye' | 'leave_policy' | 'contract' | 'work_permit' | 'disciplinary' | 'probation'
+export type ContractType = 'permanent' | 'fixed_term' | 'casual' | 'probationary'
+export type StorageProvider = 'local' | 's3' | 'supabase' | 'cloudinary'
 
 export interface SessionUser {
   id: string
@@ -39,6 +45,17 @@ export interface AnalyticsData {
   hiringFunnel: { stage: string; count: number }[]
   recentHires: number
   onboardingInProgress: number
+  // Enhanced analytics
+  candidatesBySource: { source: string; count: number }[]
+  applicantsPerRole: { role: string; count: number }[]
+  rejectionReasons: { reason: string; count: number }[]
+  offerAcceptanceRate: number
+  interviewCompletionRate: number
+  avgScreeningScore: number
+  leaveByType: { type: string; days: number }[]
+  performanceScoreTrend: { period: string; avg: number }[]
+  reviewCompletionRate: number
+  promotionPipeline: number
 }
 
 export interface AIScreeningResult {
@@ -48,6 +65,19 @@ export interface AIScreeningResult {
   gaps: string[]
   recommendation: 'shortlist' | 'review' | 'reject'
   explanation: string
+  extractedData?: {
+    name?: string
+    email?: string
+    phone?: string
+    location?: string
+    education?: string
+    experience?: string
+    skills?: string[]
+    jobTitles?: string[]
+    employers?: string[]
+    certifications?: string[]
+    yearsOfExperience?: number
+  }
 }
 
 export interface EmailTemplate {
@@ -62,6 +92,29 @@ export interface OnboardingTask {
   category: string
   required: boolean
   completed: boolean
+}
+
+export interface CompensationAllowance {
+  name: string
+  amount: number
+  frequency: 'monthly' | 'annual' | 'one-time'
+  taxable: boolean
+}
+
+export interface PayrollExportRow {
+  employeeNumber: string
+  fullName: string
+  jobTitle: string
+  department: string
+  grossSalary: number
+  nssfEmployee: number
+  nssfEmployer: number
+  paye: number
+  otherDeductions: number
+  netSalary: number
+  bankAccount: string
+  bankName: string
+  currency: string
 }
 
 export const CANDIDATE_STATUS_LABELS: Record<CandidateStatus, string> = {
@@ -107,6 +160,49 @@ export const EMPLOYMENT_TYPE_LABELS: Record<EmploymentType, string> = {
   CONTRACT: 'Contract',
   INTERNSHIP: 'Internship',
   CONSULTANT: 'Consultant',
+}
+
+export const EMAIL_COMM_STATUS_LABELS: Record<EmailCommStatus, string> = {
+  draft: 'Draft',
+  pending_approval: 'Pending Approval',
+  approved: 'Approved',
+  sent: 'Sent',
+  failed: 'Failed',
+}
+
+export const EMAIL_COMM_STATUS_COLORS: Record<EmailCommStatus, string> = {
+  draft: 'bg-gray-100 text-gray-600',
+  pending_approval: 'bg-yellow-100 text-yellow-700',
+  approved: 'bg-green-100 text-green-700',
+  sent: 'bg-blue-100 text-blue-700',
+  failed: 'bg-red-100 text-red-700',
+}
+
+export const OFFER_STATUS_LABELS: Record<OfferStatus, string> = {
+  draft: 'Draft',
+  pending_hr_approval: 'Pending HR Approval',
+  approved: 'Approved',
+  sent: 'Sent to Candidate',
+  signed: 'Signed',
+  declined: 'Declined',
+  expired: 'Expired',
+}
+
+export const COMPLIANCE_TYPE_LABELS: Record<ComplianceType, string> = {
+  nssf: 'NSSF',
+  paye: 'PAYE / TIN',
+  leave_policy: 'Leave Policy',
+  contract: 'Employment Contract',
+  work_permit: 'Work Permit',
+  disciplinary: 'Disciplinary Record',
+  probation: 'Probation',
+}
+
+export const CONTRACT_TYPE_LABELS: Record<ContractType, string> = {
+  permanent: 'Permanent',
+  fixed_term: 'Fixed Term',
+  casual: 'Casual / Daily',
+  probationary: 'Probationary',
 }
 
 export const DEFAULT_ONBOARDING_TASKS: OnboardingTask[] = [

@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, Briefcase, Users, UserCheck, ClipboardList,
   BarChart3, MessageSquare, Building2, Settings, ChevronRight,
+  Mail, ShieldCheck, DollarSign,
 } from 'lucide-react'
 
 const navItems = [
@@ -16,6 +17,9 @@ const navItems = [
   { label: 'Employees', href: '/employees', icon: UserCheck },
   { label: 'Onboarding', href: '/onboarding', icon: ClipboardList },
   { label: 'Performance', href: '/performance', icon: BarChart3 },
+  { label: 'Communications', href: '/communications', icon: Mail, adminOnly: true },
+  { label: 'Payroll Records', href: '/payroll', icon: DollarSign, adminOnly: true },
+  { label: 'Compliance', href: '/compliance', icon: ShieldCheck, adminOnly: true },
   { label: 'Analytics', href: '/analytics', icon: BarChart3, adminOnly: true },
   { label: 'AI Assistant', href: '/ai-assistant', icon: MessageSquare },
 ]

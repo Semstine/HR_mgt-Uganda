@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { generateOfferLetter } from '@/lib/pdf'
-import { writeFile, mkdir } from 'fs/promises'
-import path from 'path'
+import { uploadFile } from '@/lib/storage'
 import { v4 as uuid } from 'uuid'
 
 export async function POST(req: NextRequest) {
@@ -11,7 +10,10 @@ export async function POST(req: NextRequest) {
   if (!session?.user.companyId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { candidateId, role, salary, currency = 'UGX', startDate, probationMonths = 3, supervisor, workLocation, benefits, terms } = body
+  const {
+    candidateId, role, salary, currency = 'UGX', startDate,
+    probationMonths = 3, supervisor, workLocation, benefits, terms,
+  } = body
 
   const [candidate, company] = await Promise.all([
     prisma.candidate.findUnique({ where: { id: candidateId }, select: { firstName: true, lastName: true } }),
@@ -34,16 +36,30 @@ export async function POST(req: NextRequest) {
   })
 
   const fileName = `offer-${candidateId}-${uuid().slice(0, 8)}.pdf`
-  const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'offers')
-  await mkdir(uploadDir, { recursive: true })
-  await writeFile(path.join(uploadDir, fileName), pdfBytes)
-  const letterUrl = `/uploads/offers/${fileName}`
+  const { storageKey } = await uploadFile(Buffer.from(pdfBytes), fileName, 'offers')
+
+  // Generate a unique signing token
+  const signatureToken = uuid()
 
   const offer = await prisma.offer.upsert({
     where: { candidateId },
-    create: { candidateId, role, salary, currency, startDate: new Date(startDate), probationMonths, supervisor, workLocation, benefits, terms, letterUrl, status: 'draft' },
-    update: { role, salary, currency, startDate: new Date(startDate), probationMonths, supervisor, workLocation, benefits, terms, letterUrl },
+    create: {
+      candidateId, role, salary, currency,
+      startDate: new Date(startDate),
+      probationMonths, supervisor, workLocation, benefits, terms,
+      letterUrl: `/api/files/${storageKey}`,
+      status: 'draft',
+      signatureToken,
+      hrApprovalStatus: 'pending',
+    },
+    update: {
+      role, salary, currency,
+      startDate: new Date(startDate),
+      probationMonths, supervisor, workLocation, benefits, terms,
+      letterUrl: `/api/files/${storageKey}`,
+      signatureToken,
+    },
   })
 
-  return NextResponse.json({ offer, letterUrl })
+  return NextResponse.json({ offer, letterUrl: offer.letterUrl })
 }

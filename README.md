@@ -13,15 +13,19 @@ A full-stack HR management and recruitment SaaS platform built for East African 
 | AI resume screening and scoring | ✅ |
 | Candidate pipeline tracking | ✅ |
 | Interview scheduling | ✅ |
-| AI-generated email communications | ✅ |
-| Offer letter generation (PDF) | ✅ |
+| AI-generated email communications with approval workflow | ✅ |
+| Offer letter generation (PDF) + digital signing | ✅ |
 | Employee profile management | ✅ |
 | Employee onboarding checklist | ✅ |
 | Performance review module | ✅ |
-| People analytics dashboard | ✅ |
+| People analytics dashboard (15+ metrics, filters) | ✅ |
 | AI HR assistant (chat) | ✅ |
 | Role-based access control (8 roles) | ✅ |
-| Uganda/East Africa compliance fields (NSSF, PAYE, TIN) | ✅ |
+| Uganda/East Africa compliance module (NSSF, PAYE, TIN, contracts) | ✅ |
+| Payroll-aligned records + compensation change approvals | ✅ |
+| Cloud file storage abstraction (local / S3 / Supabase) | ✅ |
+| Duplicate candidate detection | ✅ |
+| Structured resume parsing (PDF + DOCX) | ✅ |
 | Audit logs | ✅ |
 
 ## Tech Stack
@@ -33,7 +37,8 @@ A full-stack HR management and recruitment SaaS platform built for East African 
 - **AI**: Anthropic Claude (claude-sonnet-4-6)
 - **PDF**: pdf-lib
 - **Email**: Nodemailer
-- **File parsing**: Mammoth (DOCX)
+- **File parsing**: pdf-parse (PDF), Mammoth (DOCX)
+- **Storage**: Local filesystem (S3/Supabase-ready abstraction layer)
 
 ---
 
@@ -80,16 +85,24 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 ### 4. Set up the database
 
+**Option A — With migrations (recommended for production):**
 ```bash
 npm run setup
-# This runs: prisma generate + prisma db push + seed
+# Runs: prisma generate + prisma migrate dev --name init + seed
 ```
 
-Or step by step:
+**Option B — Schema push only (faster for local dev, no migration history):**
 ```bash
-npm run db:generate   # Generate Prisma client
-npm run db:push       # Push schema to database
-npm run db:seed       # Load demo data
+npm run setup:push
+# Runs: prisma generate + prisma db push + seed
+```
+
+Step by step:
+```bash
+npm run db:generate        # Generate Prisma client
+npm run db:migrate         # Create and apply migration
+npm run db:seed            # Load demo data
+npm run db:studio          # Open Prisma Studio (GUI)
 ```
 
 ### 5. Start the development server
@@ -129,9 +142,13 @@ talentbridge/
 │   │   ├── employees/       # Employee management
 │   │   ├── onboarding/      # Onboarding tracker
 │   │   ├── performance/     # Performance reviews
-│   │   ├── analytics/       # People analytics
+│   │   ├── analytics/       # People analytics (15+ metrics)
+│   │   ├── communications/  # Email approval workflow
+│   │   ├── compliance/      # Uganda HR compliance
+│   │   ├── payroll/         # Payroll records + compensation
 │   │   └── ai-assistant/    # AI chat interface
 │   ├── apply/[slug]/        # Public job application
+│   ├── sign/[token]/        # Candidate offer signing (public)
 │   └── api/                 # API routes
 ├── components/
 │   ├── layout/              # Sidebar, Header
@@ -142,7 +159,8 @@ talentbridge/
 │   ├── email.ts             # Email sending
 │   ├── pdf.ts               # PDF generation
 │   ├── prisma.ts            # Database client
-│   ├── resume-parser.ts     # DOCX/PDF text extraction
+│   ├── resume-parser.ts     # PDF + DOCX structured extraction
+│   ├── storage.ts           # Cloud storage abstraction (local/S3/Supabase)
 │   └── utils.ts             # Utility functions
 ├── prisma/
 │   ├── schema.prisma        # Full database schema
@@ -201,11 +219,37 @@ talentbridge/
 - `POST /api/ai/generate-job` — Generate job description
 - `POST /api/company/ai-suggestions` — Company setup AI
 
-### Others
+### Offers & Signing
 - `POST /api/offers` — Generate offer letter PDF
-- `POST /api/communications` — Generate + send email
-- `POST /api/upload` — Upload resume/document
-- `GET /api/analytics` — People analytics data
+- `POST /api/offers/[id]/approve` — HR approve/reject offer
+- `GET /api/offers/sign/[token]` — Public: get offer to sign
+- `POST /api/offers/sign/[token]` — Public: submit signature or decline
+
+### Communications (Email Approval Workflow)
+- `GET /api/communications` — List emails (filter by status)
+- `POST /api/communications` — Create draft (optionally AI-generated)
+- `POST /api/communications/[id]/approve` — Approve + optionally send
+- `POST /api/communications/[id]/send` — Send an approved email
+
+### Compliance
+- `GET /api/compliance` — List compliance records
+- `POST /api/compliance` — Create record
+- `PATCH /api/compliance/[id]` — Update status
+- `DELETE /api/compliance/[id]` — Delete record
+
+### Compensation
+- `GET /api/compensation` — List change requests
+- `POST /api/compensation` — Request compensation change
+- `POST /api/compensation/[id]/approve` — Approve/reject change
+
+### Files
+- `POST /api/upload` — Upload resume/document (cloud-storage aware)
+- `GET /api/files/[...key]` — Serve private stored files (auth required)
+
+### Analytics
+- `GET /api/analytics` — Full analytics (15+ metrics, dept/date filters)
+
+### Performance
 - `GET/POST/PATCH /api/performance` — Performance reviews
 
 ---
