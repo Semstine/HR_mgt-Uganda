@@ -240,6 +240,7 @@ model Employee {
   candidate        Candidate? @relation(fields: [candidateId], references: [id])
   companyId        String
   company          Company   @relation(fields: [companyId], references: [id])
+  employeeOnboarding EmployeeOnboarding?
   departmentId     String?
   department       Department? @relation(fields: [departmentId], references: [id])
   employeeNumber   String?
@@ -466,4 +467,132 @@ model AuditLog {
   details    Json?
   ipAddress  String?
   createdAt  DateTime @default(now())
+}
+
+// ─── Onboarding Management System ────────────────────────────────────────────
+
+model OnboardingMaterial {
+  id           String   @id @default(cuid())
+  companyId    String
+  title        String
+  description  String?
+  category     String   @default("general")
+  // welcome | contract | policy | it | training | payroll | compliance | role_specific | orientation
+  fileUrl      String?
+  fileType     String?
+  storageKey   String?
+  version      String   @default("1.0")
+  status       String   @default("active")  // active | archived | draft
+  appliesTo    String   @default("all")     // all | department | role | path
+  appliesValue String?
+  uploadedBy   String?
+  isRequired   Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  stepMaterials    OnboardingStepMaterial[]
+  acknowledgements OnboardingAcknowledgement[]
+}
+
+model OnboardingPath {
+  id             String   @id @default(cuid())
+  companyId      String
+  name           String
+  description    String?
+  department     String?
+  role           String?
+  employmentType String?
+  durationDays   Int      @default(30)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  steps               OnboardingStep[]
+  employeeOnboardings EmployeeOnboarding[]
+}
+
+model OnboardingStep {
+  id            String         @id @default(cuid())
+  pathId        String
+  path          OnboardingPath @relation(fields: [pathId], references: [id], onDelete: Cascade)
+  title         String
+  description   String?
+  stepOrder     Int
+  ownerRole     String         @default("employee") // employee | hr | supervisor | it | finance
+  dueOffsetDays Int            @default(1)
+  isRequired    Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  materials OnboardingStepMaterial[]
+  tasks     EmployeeOnboardingTask[]
+}
+
+model OnboardingStepMaterial {
+  id         String             @id @default(cuid())
+  stepId     String
+  step       OnboardingStep     @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  materialId String
+  material   OnboardingMaterial @relation(fields: [materialId], references: [id])
+
+  @@unique([stepId, materialId])
+}
+
+model EmployeeOnboarding {
+  id               String          @id @default(cuid())
+  employeeId       String          @unique
+  employee         Employee        @relation(fields: [employeeId], references: [id])
+  pathId           String?
+  path             OnboardingPath? @relation(fields: [pathId], references: [id])
+  status           String          @default("in_progress") // in_progress | completed | paused
+  progressPercent  Float           @default(0)
+  startedAt        DateTime        @default(now())
+  completedAt      DateTime?
+  assignedBy       String?
+  assignmentReason String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  tasks        EmployeeOnboardingTask[]
+  activityLogs OnboardingActivityLog[]
+}
+
+model EmployeeOnboardingTask {
+  id                   String             @id @default(cuid())
+  employeeOnboardingId String
+  employeeOnboarding   EmployeeOnboarding @relation(fields: [employeeOnboardingId], references: [id], onDelete: Cascade)
+  stepId               String?
+  step                 OnboardingStep?    @relation(fields: [stepId], references: [id])
+  title                String
+  description          String?
+  ownerRole            String             @default("employee") // employee | hr | supervisor | it | finance
+  status               String             @default("pending")  // pending | completed | skipped
+  dueDate              DateTime?
+  completedAt          DateTime?
+  completedBy          String?
+  notes                String?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+}
+
+model OnboardingAcknowledgement {
+  id             String             @id @default(cuid())
+  employeeId     String
+  materialId     String
+  material       OnboardingMaterial @relation(fields: [materialId], references: [id])
+  acknowledgedAt DateTime           @default(now())
+  signatureText  String?
+  ipAddress      String?
+
+  @@unique([employeeId, materialId])
+}
+
+model OnboardingActivityLog {
+  id                   String             @id @default(cuid())
+  employeeOnboardingId String
+  employeeOnboarding   EmployeeOnboarding @relation(fields: [employeeOnboardingId], references: [id])
+  actorId              String?
+  action               String
+  details              String?
+  createdAt            DateTime           @default(now())
 }

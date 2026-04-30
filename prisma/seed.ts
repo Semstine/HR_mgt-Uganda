@@ -114,6 +114,122 @@ async function main() {
     await prisma.complianceRecord.createMany({ data: [{ companyId: company.id, employeeId: "emp-001", type: "nssf", title: "NSSF Registration - Michael Byaruhanga", status: "compliant" }, { companyId: company.id, employeeId: "emp-002", type: "nssf", title: "NSSF Registration - Patience Nakalembe", status: "pending", dueDate: new Date("2025-06-30") }, { companyId: company.id, employeeId: "emp-003", type: "contract", title: "Employment Contract - Brenda Namugga", status: "compliant" }, { companyId: company.id, employeeId: "emp-001", type: "paye", title: "PAYE Registration - Michael Byaruhanga", status: "compliant" }, { companyId: company.id, type: "leave_policy", title: "Annual Leave Policy Review", status: "pending", dueDate: new Date("2025-07-01") }] })
   }
 
+  // ── Onboarding Paths ────────────────────────────────────────────────────────
+  const engPath = await prisma.onboardingPath.upsert({
+    where: { id: "path-engineering" },
+    update: {},
+    create: {
+      id: "path-engineering", companyId: company.id,
+      name: "Engineering Onboarding Path", department: "Engineering",
+      role: "Engineer", employmentType: "FULL_TIME", durationDays: 30, isActive: true,
+      description: "Standard onboarding for all engineering hires",
+      steps: {
+        create: [
+          { title: "Welcome & Company Overview", description: "Watch welcome video and read company overview document", stepOrder: 1, ownerRole: "employee", dueOffsetDays: 1, isRequired: true },
+          { title: "Complete Personal Information", description: "Fill in all personal details, emergency contacts, and residential address", stepOrder: 2, ownerRole: "employee", dueOffsetDays: 1, isRequired: true },
+          { title: "Sign Employment Contract", description: "Review and digitally sign your employment contract", stepOrder: 3, ownerRole: "employee", dueOffsetDays: 2, isRequired: true },
+          { title: "Submit ID & Compliance Documents", description: "Upload National ID/Passport, TIN, and NSSF information", stepOrder: 4, ownerRole: "employee", dueOffsetDays: 3, isRequired: true },
+          { title: "Acknowledge HR Policies", description: "Read and acknowledge HR manual, code of conduct, and leave policy", stepOrder: 5, ownerRole: "employee", dueOffsetDays: 5, isRequired: true },
+          { title: "IT Account Setup", description: "Create company email, assign system access, and issue equipment", stepOrder: 6, ownerRole: "it", dueOffsetDays: 2, isRequired: true },
+          { title: "Submit Bank & Payroll Details", description: "Provide bank account details for payroll processing", stepOrder: 7, ownerRole: "employee", dueOffsetDays: 5, isRequired: true },
+          { title: "Engineering Team Orientation", description: "Meet the engineering team, review codebase standards, and development workflow", stepOrder: 8, ownerRole: "supervisor", dueOffsetDays: 7, isRequired: true },
+          { title: "Set 30/60/90-Day Goals", description: "Work with your supervisor to define initial performance goals", stepOrder: 9, ownerRole: "supervisor", dueOffsetDays: 10, isRequired: true },
+          { title: "HR Sign-off", description: "HR Manager to confirm onboarding completion and issue employee card", stepOrder: 10, ownerRole: "hr", dueOffsetDays: 30, isRequired: true },
+        ],
+      },
+    },
+  })
+
+  await prisma.onboardingPath.upsert({
+    where: { id: "path-general" },
+    update: {},
+    create: {
+      id: "path-general", companyId: company.id,
+      name: "General Staff Onboarding", durationDays: 14, isActive: true,
+      description: "Default onboarding for all new hires without a specific path",
+      steps: {
+        create: [
+          { title: "Welcome & Orientation", description: "Welcome session with HR", stepOrder: 1, ownerRole: "hr", dueOffsetDays: 1, isRequired: true },
+          { title: "Personal Information & Documents", description: "Complete personal info form and submit ID documents", stepOrder: 2, ownerRole: "employee", dueOffsetDays: 2, isRequired: true },
+          { title: "Sign Employment Contract", stepOrder: 3, ownerRole: "employee", dueOffsetDays: 3, isRequired: true },
+          { title: "Submit NSSF & TIN", stepOrder: 4, ownerRole: "employee", dueOffsetDays: 3, isRequired: true },
+          { title: "Acknowledge Policies", stepOrder: 5, ownerRole: "employee", dueOffsetDays: 5, isRequired: true },
+          { title: "Submit Bank Details", stepOrder: 6, ownerRole: "employee", dueOffsetDays: 7, isRequired: true },
+          { title: "HR Sign-off", stepOrder: 7, ownerRole: "hr", dueOffsetDays: 14, isRequired: true },
+        ],
+      },
+    },
+  })
+
+  await prisma.onboardingPath.upsert({
+    where: { id: "path-internship" },
+    update: {},
+    create: {
+      id: "path-internship", companyId: company.id,
+      name: "Internship Onboarding Path", employmentType: "INTERNSHIP",
+      durationDays: 7, isActive: true,
+      description: "Lightweight onboarding for interns",
+      steps: {
+        create: [
+          { title: "Welcome & Introductions", stepOrder: 1, ownerRole: "hr", dueOffsetDays: 1, isRequired: true },
+          { title: "Submit Personal Details", stepOrder: 2, ownerRole: "employee", dueOffsetDays: 1, isRequired: true },
+          { title: "Sign Internship Agreement", stepOrder: 3, ownerRole: "employee", dueOffsetDays: 2, isRequired: true },
+          { title: "IT & Workspace Setup", stepOrder: 4, ownerRole: "it", dueOffsetDays: 2, isRequired: true },
+          { title: "Meet Supervisor & Set Goals", stepOrder: 5, ownerRole: "supervisor", dueOffsetDays: 3, isRequired: true },
+        ],
+      },
+    },
+  })
+
+  // ── Onboarding Materials ─────────────────────────────────────────────────────
+  const matsCount = await prisma.onboardingMaterial.count({ where: { companyId: company.id } })
+  if (matsCount === 0) {
+    await prisma.onboardingMaterial.createMany({
+      data: [
+        { companyId: company.id, title: "Company Welcome Guide", description: "Overview of Acme Uganda Ltd, mission, values, and culture", category: "welcome", version: "2025.1", status: "active", appliesTo: "all", isRequired: true, uploadedBy: "Sarah Nakibuuka" },
+        { companyId: company.id, title: "HR Policy Manual", description: "Comprehensive HR policies including leave, conduct, and grievance", category: "policy", version: "2025.1", status: "active", appliesTo: "all", isRequired: true, uploadedBy: "James Okello" },
+        { companyId: company.id, title: "Code of Conduct", description: "Expected standards of professional behaviour", category: "policy", version: "2024.2", status: "active", appliesTo: "all", isRequired: true, uploadedBy: "James Okello" },
+        { companyId: company.id, title: "Leave Policy", description: "Annual leave, sick leave, maternity/paternity leave entitlements", category: "policy", version: "2025.1", status: "active", appliesTo: "all", isRequired: true, uploadedBy: "James Okello" },
+        { companyId: company.id, title: "NSSF/PAYE/TIN Information Guide", description: "Uganda NSSF and PAYE compliance information for employees", category: "compliance", version: "2025.1", status: "active", appliesTo: "all", isRequired: true, uploadedBy: "James Okello" },
+        { companyId: company.id, title: "IT Usage Policy", description: "Company policy on use of IT systems, email, and internet", category: "it", version: "2024.1", status: "active", appliesTo: "all", isRequired: true, uploadedBy: "Sarah Nakibuuka" },
+        { companyId: company.id, title: "Engineering Development Standards", description: "Coding standards, Git workflow, and PR review process", category: "role_specific", version: "2025.1", status: "active", appliesTo: "department", appliesValue: "Engineering", isRequired: true, uploadedBy: "Sarah Nakibuuka" },
+        { companyId: company.id, title: "Payroll & Bank Details Form", description: "Form to collect employee bank account information for payroll", category: "payroll", version: "2025.1", status: "active", appliesTo: "all", isRequired: true, uploadedBy: "James Okello" },
+        { companyId: company.id, title: "Health & Safety Guide", description: "Workplace health and safety procedures and emergency contacts", category: "general", version: "2024.1", status: "active", appliesTo: "all", isRequired: false, uploadedBy: "James Okello" },
+        { companyId: company.id, title: "Probation Review Form", description: "Template for 3-month probation performance review", category: "compliance", version: "2025.1", status: "active", appliesTo: "all", isRequired: false, uploadedBy: "James Okello" },
+      ],
+    })
+  }
+
+  // ── Employee Onboarding (new system) ─────────────────────────────────────────
+  const eo3Exists = await prisma.employeeOnboarding.findUnique({ where: { employeeId: "emp-003" } })
+  if (!eo3Exists) {
+    const eo3 = await prisma.employeeOnboarding.create({
+      data: {
+        employeeId: "emp-003", pathId: engPath.id,
+        status: "in_progress", progressPercent: 30,
+        assignmentReason: "Auto-matched on department: Engineering",
+        assignedBy: "System",
+        tasks: {
+          create: [
+            { title: "Welcome & Company Overview", ownerRole: "employee", status: "completed", dueDate: new Date("2024-01-11"), completedAt: new Date("2024-01-11") },
+            { title: "Complete Personal Information", ownerRole: "employee", status: "completed", dueDate: new Date("2024-01-11"), completedAt: new Date("2024-01-11") },
+            { title: "Sign Employment Contract", ownerRole: "employee", status: "completed", dueDate: new Date("2024-01-12"), completedAt: new Date("2024-01-12") },
+            { title: "Submit ID & Compliance Documents", ownerRole: "employee", status: "pending", dueDate: new Date("2024-01-13") },
+            { title: "Acknowledge HR Policies", ownerRole: "employee", status: "pending", dueDate: new Date("2024-01-15") },
+            { title: "IT Account Setup", ownerRole: "it", status: "completed", dueDate: new Date("2024-01-12"), completedAt: new Date("2024-01-12") },
+            { title: "Submit Bank & Payroll Details", ownerRole: "employee", status: "pending", dueDate: new Date("2024-01-15") },
+            { title: "Engineering Team Orientation", ownerRole: "supervisor", status: "pending", dueDate: new Date("2024-01-17") },
+            { title: "Set 30/60/90-Day Goals", ownerRole: "supervisor", status: "pending", dueDate: new Date("2024-01-20") },
+            { title: "HR Sign-off", ownerRole: "hr", status: "pending", dueDate: new Date("2024-02-09") },
+          ],
+        },
+      },
+    })
+    await prisma.onboardingActivityLog.create({
+      data: { employeeOnboardingId: eo3.id, actorId: "System", action: "path_assigned", details: "Auto-matched on department: Engineering" },
+    })
+  }
+
   console.log("Seed complete! Login: admin@demo.com / demo1234")
 }
 

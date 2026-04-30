@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { assignOnboardingPath } from '@/lib/onboarding'
 
 // GET — fetch offer details by token (public, no auth)
 export async function GET(_req: NextRequest, { params }: { params: { token: string } }) {
@@ -100,6 +101,24 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
       changedBy: signedByName,
     },
   })
+
+  // Auto-assign onboarding path if an employee record exists for this candidate
+  try {
+    const employee = await prisma.employee.findUnique({
+      where: { candidateId: offer.candidateId },
+      include: { department: true },
+    })
+    if (employee) {
+      await assignOnboardingPath(employee.id, employee.companyId, {
+        department: employee.department?.name,
+        jobTitle: employee.jobTitle,
+        employmentType: employee.employmentType,
+        startDate: offer.startDate,
+      })
+    }
+  } catch {
+    // Non-fatal: onboarding can be assigned manually from HR dashboard
+  }
 
   return NextResponse.json({ message: 'Offer signed successfully' })
 }
