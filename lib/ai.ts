@@ -278,6 +278,211 @@ Return JSON:
   return parseJson(text)
 }
 
+// ─── Onboarding AI ───────────────────────────────────────────────────────────
+
+export async function recommendOnboardingPath(params: {
+  paths: { id: string; name: string; department?: string | null; role?: string | null; employmentType?: string | null; durationDays: number; steps: number }[]
+  employee: { jobTitle: string; department?: string; employmentType: string; startDate: string }
+}): Promise<{
+  recommendedPathId: string
+  confidence: 'high' | 'medium' | 'low'
+  reason: string
+  alternatives: { pathId: string; reason: string }[]
+  tips: string[]
+}> {
+  const prompt = `You are an HR onboarding specialist for an East African company. Recommend the best onboarding path for this new employee.
+
+Available Onboarding Paths:
+${params.paths.map((p, i) =>
+  `${i + 1}. ID: ${p.id} | Name: "${p.name}" | Dept: ${p.department ?? 'Any'} | Role keyword: ${p.role ?? 'Any'} | Employment: ${p.employmentType ?? 'Any'} | Duration: ${p.durationDays} days | Steps: ${p.steps}`
+).join('\n')}
+
+New Employee:
+- Job title: ${params.employee.jobTitle}
+- Department: ${params.employee.department ?? 'Unknown'}
+- Employment type: ${params.employee.employmentType}
+- Start date: ${params.employee.startDate}
+
+Pick the BEST match and explain why. Return JSON:
+{
+  "recommendedPathId": "the-path-id",
+  "confidence": "high|medium|low",
+  "reason": "2-3 sentence explanation of why this is the best match",
+  "alternatives": [{"pathId": "id", "reason": "brief reason"}],
+  "tips": ["Onboarding tip specific to this role/context", "..."] (2-3 tips)
+}`
+
+  const resp = await client.messages.create({
+    model: MODEL,
+    max_tokens: 1024,
+    messages: [{ role: 'user', content: prompt }],
+  })
+  const text = resp.content[0].type === 'text' ? resp.content[0].text : ''
+  return parseJson(text)
+}
+
+export async function generateOnboardingSteps(params: {
+  pathName: string
+  department?: string
+  role?: string
+  employmentType?: string
+  durationDays: number
+  companyName: string
+}): Promise<{
+  steps: {
+    title: string
+    description: string
+    ownerRole: 'employee' | 'hr' | 'supervisor' | 'it' | 'finance'
+    dueOffsetDays: number
+    isRequired: boolean
+  }[]
+  notes: string
+}> {
+  const prompt = `You are an HR specialist designing an employee onboarding plan for an East African company.
+
+Company: ${params.companyName}
+Onboarding Path: "${params.pathName}"
+Department: ${params.department ?? 'General'}
+Role type: ${params.role ?? 'General staff'}
+Employment type: ${params.employmentType ?? 'FULL_TIME'}
+Total duration: ${params.durationDays} days
+
+Create a complete, ordered set of onboarding steps appropriate for this role. Include Uganda-specific compliance steps (NSSF, TIN, PAYE, employment contract).
+
+Owner roles: "employee" (employee does it), "hr" (HR team), "supervisor" (line manager), "it" (IT team), "finance" (finance/payroll).
+
+Return JSON:
+{
+  "steps": [
+    {
+      "title": "Step title",
+      "description": "What exactly needs to be done",
+      "ownerRole": "employee|hr|supervisor|it|finance",
+      "dueOffsetDays": 1,
+      "isRequired": true
+    }
+  ],
+  "notes": "Brief note on this onboarding plan"
+}
+
+Generate 8-12 steps spanning from Day 1 to Day ${params.durationDays}. Make dueOffsetDays realistic and progressive.`
+
+  const resp = await client.messages.create({
+    model: MODEL,
+    max_tokens: 2048,
+    messages: [{ role: 'user', content: prompt }],
+  })
+  const text = resp.content[0].type === 'text' ? resp.content[0].text : ''
+  return parseJson(text)
+}
+
+export async function summarizeOnboardingProgress(params: {
+  employee: { name: string; jobTitle: string; department?: string; startDate: string }
+  path?: string
+  progressPercent: number
+  tasks: { title: string; status: string; ownerRole: string; dueDate?: string; overdue: boolean }[]
+  startedAt: string
+}): Promise<{
+  summary: string
+  bottleneck: string
+  hrActions: string[]
+  employeeActions: string[]
+  supervisorActions: string[]
+  riskLevel: 'low' | 'medium' | 'high'
+  estimatedCompletion: string
+}> {
+  const overdue = params.tasks.filter(t => t.overdue)
+  const pending = params.tasks.filter(t => t.status === 'pending')
+  const completed = params.tasks.filter(t => t.status === 'completed')
+
+  const prompt = `You are an HR onboarding analyst. Analyse this employee's onboarding progress and provide actionable insights.
+
+Employee: ${params.employee.name} — ${params.employee.jobTitle} (${params.employee.department ?? 'Unknown dept'})
+Start date: ${params.employee.startDate}
+Onboarding path: ${params.path ?? 'Default'}
+Progress: ${params.progressPercent}% complete
+Onboarding started: ${params.startedAt}
+
+Tasks:
+- Completed (${completed.length}): ${completed.map(t => t.title).join(', ') || 'None'}
+- Pending (${pending.length}): ${pending.map(t => `"${t.title}" [${t.ownerRole}]`).join(', ') || 'None'}
+- OVERDUE (${overdue.length}): ${overdue.map(t => `"${t.title}" [${t.ownerRole}]`).join(', ') || 'None'}
+
+Analyse the situation and return JSON:
+{
+  "summary": "2-3 sentence overall summary of where this employee stands in onboarding",
+  "bottleneck": "What is the main blocker or risk right now (1-2 sentences)",
+  "hrActions": ["Specific action HR should take now", "..."] (2-3 items),
+  "employeeActions": ["What the employee needs to do", "..."] (1-3 items),
+  "supervisorActions": ["What the supervisor should do", "..."] (1-2 items),
+  "riskLevel": "low|medium|high",
+  "estimatedCompletion": "Realistic completion estimate e.g. 'On track - 5 days', 'Delayed by ~1 week'"
+}`
+
+  const resp = await client.messages.create({
+    model: MODEL,
+    max_tokens: 1024,
+    messages: [{ role: 'user', content: prompt }],
+  })
+  const text = resp.content[0].type === 'text' ? resp.content[0].text : ''
+  return parseJson(text)
+}
+
+export async function suggestOnboardingMaterials(params: {
+  stepTitle: string
+  stepDescription?: string
+  pathName: string
+  department?: string
+  role?: string
+  existingMaterials: { title: string; category: string }[]
+}): Promise<{
+  suggestions: {
+    title: string
+    description: string
+    category: string
+    isRequired: boolean
+    reason: string
+  }[]
+  note: string
+}> {
+  const prompt = `You are an HR onboarding specialist. Suggest onboarding materials for this step in an East African company's onboarding process.
+
+Onboarding Path: "${params.pathName}"
+Department: ${params.department ?? 'General'}
+Role: ${params.role ?? 'General staff'}
+Step: "${params.stepTitle}"
+Step description: ${params.stepDescription ?? 'Not provided'}
+
+Existing materials in library (to avoid duplicates):
+${params.existingMaterials.map(m => `- ${m.title} [${m.category}]`).join('\n') || 'None yet'}
+
+Material categories available: welcome, contract, policy, it, training, payroll, compliance, role_specific, orientation, general
+
+Suggest 3-5 specific, practical materials that should be attached to this step. For Uganda context, consider NSSF, PAYE, TIN, Employment Act requirements where relevant.
+
+Return JSON:
+{
+  "suggestions": [
+    {
+      "title": "Material name",
+      "description": "What this document contains",
+      "category": "category-name",
+      "isRequired": true,
+      "reason": "Why this material is needed for this step"
+    }
+  ],
+  "note": "Brief tip about materials for this step"
+}`
+
+  const resp = await client.messages.create({
+    model: MODEL,
+    max_tokens: 1024,
+    messages: [{ role: 'user', content: prompt }],
+  })
+  const text = resp.content[0].type === 'text' ? resp.content[0].text : ''
+  return parseJson(text)
+}
+
 // ─── HR assistant ─────────────────────────────────────────────────────────────
 
 export async function askHRAssistant(params: {
