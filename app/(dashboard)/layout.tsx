@@ -1,5 +1,5 @@
 import { getSession } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { prisma, withRetry } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import Sidebar from '@/components/layout/sidebar'
 
@@ -9,10 +9,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   let companyName: string | undefined
   if (session.user.companyId) {
-    const company = await prisma.company.findUnique({
-      where: { id: session.user.companyId },
-      select: { name: true },
-    })
+    const company = await withRetry(() =>
+      prisma.company.findUnique({
+        where: { id: session.user.companyId! },
+        select: { name: true },
+      })
+    )
     companyName = company?.name
   }
 
