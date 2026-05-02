@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma, withRetry } from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth'
-import { initializeWorkflowSteps, generatePostRef, createAuditEvent } from '@/lib/dsc-workflow'
+import { DSC_RECRUITMENT_WORKFLOW, createAuditEvent, recruitmentStatusForStep } from '@/lib/dsc-workflow'
 
 export async function GET(req: Request) {
   try {
@@ -11,14 +11,12 @@ export async function GET(req: Request) {
 
     const cycles = await withRetry(() =>
       prisma.recruitmentCycle.findMany({
-        where: { districtId: districtId || undefined },
+        where: { ...(districtId ? { districtId } : {}) },
         include: {
           district: true,
-          vacancy: {
-            include: { department: true, staffStructure: { include: { salaryScale: true } } },
-          },
+          vacancyDeclaration: { include: { staffStructure: { include: { salaryScale: true } } } },
           workflowSteps: { orderBy: { stepNumber: 'asc' } },
-          adverts: { orderBy: { createdAt: 'desc' }, take: 1 },
+          advert: true,
           _count: { select: { applications: true } },
         },
         orderBy: { createdAt: 'desc' },
@@ -38,24 +36,41 @@ export async function POST(req: Request) {
     }
     const body = await req.json()
 
-    const district = await withRetry(() => prisma.district.findUnique({ where: { id: body.districtId || session.user.districtId! } }))
+    const district = await withRetry(() =>
+      prisma.district.findUnique({ where: { id: body.districtId || session.user.districtId! } })
+    )
     if (!district) return NextResponse.json({ error: 'District not found' }, { status: 404 })
 
-    const postRef = await generatePostRef(district.id, district.code)
+    const count = await prisma.recruitmentCycle.count({ where: { districtId: district.id } })
+    const postRef = body.postRef || `${district.code}/${new Date().getFullYear()}/${String(count + 1).padStart(3, '0')}`
 
     const cycle = await withRetry(() =>
       prisma.recruitmentCycle.create({
         data: {
           districtId: district.id,
-          vacancyId: body.vacancyId,
-          postReference: postRef,
-          financialYear: body.financialYear,
-          postsAdvertised: body.postsAdvertised,
+          vacancyDeclarationId: body.vacancyDeclarationId || null,
+          postTitle: body.postTitle,
+          postRef,
+          grade: body.grade,
+          department: body.department,
+          numberOfPosts: body.numberOfPosts ?? 1,
+          currentStep: 1,
+          status: recruitmentStatusForStep(1),
+          secretaryId: session.user.role === 'SECRETARY_DSC' ? session.user.id : body.secretaryId || null,
+          financialYear: body.financialYear || String(new Date().getFullYear()),
+          workflowSteps: {
+            create: DSC_RECRUITMENT_WORKFLOW.map((step) => ({
+              stepNumber: step.stepNumber,
+              stepName: step.stepName,
+              actorRole: step.actorRole,
+              status: step.stepNumber === 1 ? 'in_progress' : 'pending',
+              startedAt: step.stepNumber === 1 ? new Date() : null,
+            })),
+          },
         },
+        include: { workflowSteps: { orderBy: { stepNumber: 'asc' } } },
       })
     )
-
-    await initializeWorkflowSteps(cycle.id)
 
     await createAuditEvent({
       entityType: 'RecruitmentCycle',
@@ -63,7 +78,7 @@ export async function POST(req: Request) {
       action: 'RECRUITMENT_CYCLE_CREATED',
       actorId: session.user.id,
       districtId: district.id,
-      metadata: { postReference: postRef },
+      metadata: { postRef },
     })
 
     return NextResponse.json({ data: cycle }, { status: 201 })

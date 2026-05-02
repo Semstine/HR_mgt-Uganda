@@ -12,19 +12,19 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     }
 
     const advert = await withRetry(() =>
-      prisma.advert.findUnique({ where: { id: params.id }, include: { cycle: true } })
+      prisma.advert.findUnique({ where: { id: params.id }, include: { recruitmentCycle: true } })
     )
     if (!advert) return NextResponse.json({ error: 'Not found' }, { status: 404 })
     if (advert.status !== 'approved') return NextResponse.json({ error: 'Advert must be approved before publishing' }, { status: 400 })
 
     const body = await req.json()
-    const channels: string[] = body.channels || advert.channels
+    const channels: string[] = body.channels || ['notice_board_pdf', 'website']
 
     const logs = await Promise.all(
       channels.map(async (channel) => {
         let externalRef: string | null = null
         if (channel === 'psc_portal') {
-          const result = await publishToPSC({ advertId: advert.id, title: advert.title })
+          const result = await publishToPSC({ advertId: advert.id, postTitle: advert.postTitle })
           externalRef = result.reference ?? null
         }
         return withRetry(() =>
@@ -32,9 +32,9 @@ export async function POST(req: Request, { params }: { params: { id: string } })
             data: {
               advertId: advert.id,
               channel,
+              status: 'successful',
               publishedAt: new Date(),
-              externalReference: externalRef,
-              publishedById: session.user.id,
+              reference: externalRef,
             },
           })
         )
@@ -42,7 +42,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     )
 
     await withRetry(() =>
-      prisma.advert.update({ where: { id: params.id }, data: { status: 'published' } })
+      prisma.advert.update({ where: { id: params.id }, data: { status: 'published', publishedAt: new Date() } })
     )
 
     await createAuditEvent({

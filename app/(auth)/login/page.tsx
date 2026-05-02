@@ -75,8 +75,10 @@ export default function LoginPage() {
       </p>
 
       <div className="mt-6 p-3 bg-blue-50 rounded-lg text-xs text-blue-700">
-        <strong>Demo credentials:</strong><br />
-        Email: admin@demo.com &nbsp;|&nbsp; Password: demo1234
+        <strong>DSC-HRMS Demo:</strong><br />
+        chairperson@wakiso.go.ug &nbsp;|&nbsp; Password123!<br />
+        secretary@wakiso.go.ug &nbsp;|&nbsp; Password123!<br />
+        admin@mops.go.ug &nbsp;|&nbsp; Password123!
       </div>
     </>
   )

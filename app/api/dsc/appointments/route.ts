@@ -8,22 +8,20 @@ export async function GET(req: Request) {
   try {
     const session = await requireAuth()
     const { searchParams } = new URL(req.url)
-    const cycleId = searchParams.get('cycleId')
+    const recruitmentCycleId = searchParams.get('cycleId')
     const districtId = searchParams.get('districtId') || session.user.districtId
 
     const decisions = await withRetry(() =>
       prisma.appointmentDecision.findMany({
         where: {
-          cycle: {
-            ...(cycleId ? { id: cycleId } : {}),
+          recruitmentCycle: {
+            ...(recruitmentCycleId ? { id: recruitmentCycleId } : {}),
             ...(districtId ? { districtId } : {}),
           },
         },
         include: {
-          cycle: { include: { vacancy: { include: { department: true, staffStructure: true } } } },
-          application: { select: { id: true, applicationRef: true, surname: true, firstName: true, phone: true, email: true } },
-          letter: true,
-          dscMinute: true,
+          recruitmentCycle: { include: { vacancyDeclaration: { include: { staffStructure: true } } } },
+          application: { select: { id: true, applicationRef: true, firstName: true, lastName: true, phone: true, email: true } },
         },
         orderBy: { createdAt: 'desc' },
       })
@@ -37,40 +35,55 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const session = await requireAuth()
-    if (!canIssueAppointment(session.user.role)) {
+    if (!canIssueAppointment(session.user.role as any)) {
       return NextResponse.json({ error: 'Forbidden — only CAO can issue appointment decisions' }, { status: 403 })
     }
     const body = await req.json()
 
-    // Gate: all verifications must be complete
     const ready = await allVerificationsComplete(body.applicationId)
     if (!ready) {
       return NextResponse.json({ error: 'Mandatory credential verifications are not complete' }, { status: 400 })
     }
 
+    const cycle = await withRetry(() =>
+      prisma.recruitmentCycle.findUnique({ where: { id: body.recruitmentCycleId } })
+    )
+    if (!cycle) return NextResponse.json({ error: 'Cycle not found' }, { status: 404 })
+
     const decision = await withRetry(() =>
       prisma.appointmentDecision.create({
         data: {
-          cycleId: body.cycleId,
+          recruitmentCycleId: body.recruitmentCycleId,
           applicationId: body.applicationId,
-          decisionType: body.decisionType || 'appointed',
-          dscMinuteId: body.dscMinuteId,
-          decidedById: session.user.id,
+          dscDecision: body.dscDecision || 'appointed',
+          decisionDate: new Date(),
+          minuteRef: body.minuteRef,
+          postTitle: body.postTitle || cycle.postTitle,
+          grade: body.grade || cycle.grade,
+          dutyStation: body.dutyStation || '',
+          reportingOfficer: body.reportingOfficer,
           effectiveDate: body.effectiveDate ? new Date(body.effectiveDate) : undefined,
+          decidedBy: session.user.id,
           notes: body.notes,
         },
       })
     )
 
     if (body.generateLetter) {
-      const letter = await withRetry(() =>
+      const acceptanceDeadline = body.acceptanceDeadline
+        ? new Date(body.acceptanceDeadline)
+        : new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
+
+      await withRetry(() =>
         prisma.appointmentLetter.create({
           data: {
-            decisionId: decision.id,
+            applicationId: body.applicationId,
             letterRef: `APT/${new Date().getFullYear()}/${decision.id.slice(-6).toUpperCase()}`,
-            templateUsed: body.template || 'standard',
-            generatedById: session.user.id,
-            acceptanceDeadline: body.acceptanceDeadline ? new Date(body.acceptanceDeadline) : undefined,
+            postTitle: body.postTitle || cycle.postTitle,
+            grade: body.grade || cycle.grade,
+            effectiveDate: body.effectiveDate ? new Date(body.effectiveDate) : new Date(),
+            dutyStation: body.dutyStation || '',
+            acceptanceDeadline,
           },
         })
       )
@@ -81,7 +94,7 @@ export async function POST(req: Request) {
       if (application?.phone) {
         await sendSMS(
           application.phone,
-          `Dear ${application.firstName}, your appointment letter (${letter.letterRef}) is ready. Please collect it from the DSC office within 14 days. DSC-HRMS`
+          `Dear ${application.firstName}, your appointment letter is ready. Collect it from the DSC office within 14 days. DSC-HRMS`
         )
       }
 
@@ -95,7 +108,7 @@ export async function POST(req: Request) {
       entityId: decision.id,
       action: 'APPOINTMENT_DECISION_MADE',
       actorId: session.user.id,
-      metadata: { applicationId: body.applicationId, decisionType: body.decisionType },
+      metadata: { applicationId: body.applicationId, dscDecision: body.dscDecision },
     })
 
     return NextResponse.json({ data: decision }, { status: 201 })

@@ -15,8 +15,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         where: { id: params.id },
         data: {
           status: 'approved',
-          approvedById: session.user.id,
-          approvalMinuteRef: body.minuteRef,
+          approvedBy: session.user.id,
+          minuteItemRef: body.minuteRef,
           approvedAt: new Date(),
         },
       })

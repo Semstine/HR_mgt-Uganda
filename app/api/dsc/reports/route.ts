@@ -12,14 +12,14 @@ export async function GET(req: Request) {
 
     if (type === 'overview') {
       const [cycles, applications, employees, flags, leaves] = await Promise.all([
-        withRetry(() => prisma.recruitmentCycle.count({ where: { districtId: districtId || undefined, financialYear } })),
+        withRetry(() => prisma.recruitmentCycle.count({ where: { ...(districtId ? { districtId } : {}), financialYear } })),
         withRetry(() => prisma.pSCForm3Application.count({
-          where: { cycle: { districtId: districtId || undefined, financialYear } },
+          where: { recruitmentCycle: { ...(districtId ? { districtId } : {}), financialYear } },
         })),
-        withRetry(() => prisma.employeeGovernmentProfile.count({ where: { districtId: districtId || undefined } })),
-        withRetry(() => prisma.ghostWorkerFlag.count({ where: { districtId: districtId || undefined, resolved: false } })),
+        withRetry(() => prisma.employeeGovernmentProfile.count({ where: { ...(districtId ? { districtId } : {}) } })),
+        withRetry(() => prisma.ghostWorkerFlag.count({ where: { ...(districtId ? { districtId } : {}), status: 'open' } })),
         withRetry(() => prisma.leaveRequest.count({
-          where: { employee: { districtId: districtId || undefined }, status: 'pending' },
+          where: { employee: { ...(districtId ? { districtId } : {}) }, status: 'pending' },
         })),
       ])
       return NextResponse.json({ data: { cycles, applications, employees, flags, leaves, financialYear } })
@@ -29,13 +29,16 @@ export async function GET(req: Request) {
       const breakdown = await withRetry(() =>
         prisma.employeeGovernmentProfile.groupBy({
           by: ['gender'],
-          where: { districtId: districtId || undefined },
+          where: { ...(districtId ? { districtId } : {}) },
           _count: { id: true },
         })
       )
       const disability = await withRetry(() =>
         prisma.pSCForm3Application.count({
-          where: { cycle: { districtId: districtId || undefined }, disability: true },
+          where: {
+            recruitmentCycle: { ...(districtId ? { districtId } : {}) },
+            pwdStatus: true,
+          },
         })
       )
       return NextResponse.json({ data: { genderBreakdown: breakdown, disabilityApplicants: disability } })
@@ -44,18 +47,17 @@ export async function GET(req: Request) {
     if (type === 'fraud') {
       const [ghostWorkers, fraudFlags, forgeries] = await Promise.all([
         withRetry(() => prisma.ghostWorkerFlag.findMany({
-          where: { districtId: districtId || undefined },
-          include: { employee: { select: { surname: true, firstName: true, fileNumber: true } } },
+          where: { ...(districtId ? { districtId } : {}) },
           orderBy: { flaggedAt: 'desc' },
           take: 50,
         })),
         withRetry(() => prisma.fraudFlag.findMany({
-          where: { districtId: districtId || undefined },
-          orderBy: { flaggedAt: 'desc' },
+          where: { ...(districtId ? { districtId } : {}) },
+          orderBy: { detectedAt: 'desc' },
           take: 50,
         })),
-        withRetry(() => prisma.credentialVerification.count({
-          where: { fraudFlag: true, application: { cycle: { districtId: districtId || undefined } } },
+        withRetry(() => prisma.fraudFlag.count({
+          where: { ...(districtId ? { districtId } : {}), status: { not: 'cleared' } },
         })),
       ])
       return NextResponse.json({ data: { ghostWorkers, fraudFlags, forgeries } })
@@ -64,7 +66,7 @@ export async function GET(req: Request) {
     if (type === 'statutory') {
       const reports = await withRetry(() =>
         prisma.statutoryReport.findMany({
-          where: { districtId: districtId || undefined },
+          where: { ...(districtId ? { districtId } : {}) },
           orderBy: { generatedAt: 'desc' },
           take: 20,
         })

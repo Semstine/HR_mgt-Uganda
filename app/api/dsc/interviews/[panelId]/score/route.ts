@@ -6,7 +6,7 @@ import { createAuditEvent } from '@/lib/dsc-workflow'
 export async function POST(req: Request, { params }: { params: { panelId: string } }) {
   try {
     const session = await requireAuth()
-    if (!canScore(session.user.role)) {
+    if (!canScore(session.user.role as any)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
     const body = await req.json()
@@ -21,25 +21,23 @@ export async function POST(req: Request, { params }: { params: { panelId: string
           },
         },
         update: {
-          technicalScore: body.technicalScore,
-          communicationScore: body.communicationScore,
-          leadershipScore: body.leadershipScore,
-          professionalismScore: body.professionalismScore,
+          scores: body.scores,
           totalScore: body.totalScore,
           recommendation: body.recommendation,
-          remarks: body.remarks,
+          notes: body.notes,
+          isSubmitted: Boolean(body.submit),
+          submittedAt: body.submit ? new Date() : null,
         },
         create: {
           panelId: params.panelId,
           applicationId: body.applicationId,
           scorerId: session.user.id,
-          technicalScore: body.technicalScore,
-          communicationScore: body.communicationScore,
-          leadershipScore: body.leadershipScore,
-          professionalismScore: body.professionalismScore,
+          scores: body.scores,
           totalScore: body.totalScore,
-          recommendation: body.recommendation,
-          remarks: body.remarks,
+          recommendation: body.recommendation || 'reserve',
+          notes: body.notes,
+          isSubmitted: Boolean(body.submit),
+          submittedAt: body.submit ? new Date() : null,
         },
       })
     )

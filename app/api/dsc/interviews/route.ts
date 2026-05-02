@@ -7,16 +7,16 @@ export async function GET(req: Request) {
   try {
     const session = await requireAuth()
     const { searchParams } = new URL(req.url)
-    const cycleId = searchParams.get('cycleId')
+    const recruitmentCycleId = searchParams.get('cycleId')
 
     const panels = await withRetry(() =>
       prisma.interviewPanel.findMany({
-        where: { cycleId: cycleId || undefined },
+        where: { ...(recruitmentCycleId ? { recruitmentCycleId } : {}) },
         include: {
-          cycle: { include: { vacancy: { include: { department: true } } } },
-          members: { include: { user: { select: { id: true, name: true, role: true } } } },
+          recruitmentCycle: { include: { vacancyDeclaration: { include: { department: true } } } },
+          panelMembers: true,
           schedules: {
-            include: { application: { select: { id: true, applicationRef: true, surname: true, firstName: true } } },
+            include: { application: { select: { id: true, applicationRef: true, lastName: true, firstName: true } } },
           },
           scores: {
             where: session.user.role === 'DSC_MEMBER' ? { scorerId: session.user.id } : {},
@@ -41,17 +41,16 @@ export async function POST(req: Request) {
     const panel = await withRetry(() =>
       prisma.interviewPanel.create({
         data: {
-          cycleId: body.cycleId,
-          panelType: body.panelType || 'interview',
-          venue: body.venue,
-          members: {
-            create: (body.memberIds as string[]).map((userId: string) => ({
-              userId,
-              role: body.memberRoles?.[userId] || 'member',
+          recruitmentCycleId: body.recruitmentCycleId,
+          createdBy: session.user.id,
+          panelMembers: {
+            create: (body.memberIds as string[]).map((memberId: string) => ({
+              memberId,
+              memberRole: body.memberRoles?.[memberId] || 'dsc_member',
             })),
           },
         },
-        include: { members: true },
+        include: { panelMembers: true },
       })
     )
     await createAuditEvent({
@@ -59,7 +58,7 @@ export async function POST(req: Request) {
       entityId: panel.id,
       action: 'INTERVIEW_PANEL_CONSTITUTED',
       actorId: session.user.id,
-      metadata: { cycleId: body.cycleId },
+      metadata: { recruitmentCycleId: body.recruitmentCycleId },
     })
     return NextResponse.json({ data: panel }, { status: 201 })
   } catch (e: any) {

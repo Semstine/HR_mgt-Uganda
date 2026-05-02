@@ -1,4 +1,5 @@
 import { createHash } from 'crypto'
+import { prisma } from './prisma'
 import type { DscRole } from '@/types'
 
 export type DscWorkflowStepDefinition = {
@@ -80,4 +81,98 @@ export async function createImmutableAuditEvent(params: {
       metadata: params.metadata ?? undefined,
     },
   })
+}
+
+export async function createAuditEvent(params: {
+  entityType: string
+  entityId: string
+  action: string
+  actorId: string
+  actorRole?: string
+  districtId?: string | null
+  recruitmentCycleId?: string | null
+  metadata?: unknown
+}) {
+  return prisma.immutableAuditEvent.create({
+    data: {
+      districtId: params.districtId || null,
+      recruitmentCycleId: params.recruitmentCycleId || null,
+      actorId: params.actorId,
+      actorRole: params.actorRole || 'SYSTEM',
+      action: params.action,
+      entityType: params.entityType,
+      entityId: params.entityId,
+      metadata: params.metadata ?? undefined,
+    },
+  }).catch(() => null)
+}
+
+export async function generatePostRef(districtId: string, code: string): Promise<string> {
+  const count = await prisma.recruitmentCycle.count({ where: { districtId } })
+  const seq = String(count + 1).padStart(3, '0')
+  const year = new Date().getFullYear()
+  return `${code}/${year}/${seq}`
+}
+
+export async function initializeWorkflowSteps(cycleId: string) {
+  return prisma.recruitmentWorkflowStep.createMany({
+    data: DSC_RECRUITMENT_WORKFLOW.map((step) => ({
+      recruitmentCycleId: cycleId,
+      stepNumber: step.stepNumber,
+      stepName: step.stepName,
+      actorRole: step.actorRole,
+      status: step.stepNumber === 1 ? 'in_progress' : 'pending',
+      startedAt: step.stepNumber === 1 ? new Date() : null,
+    })),
+  })
+}
+
+export async function advanceStep(cycleId: string, userId: string, role: string, notes?: string) {
+  const cycle = await prisma.recruitmentCycle.findUnique({
+    where: { id: cycleId },
+    include: { workflowSteps: { orderBy: { stepNumber: 'asc' } } },
+  })
+  if (!cycle) throw new Error('Cycle not found')
+
+  const currentStepRecord = cycle.workflowSteps.find((s) => s.stepNumber === cycle.currentStep)
+  if (currentStepRecord) {
+    await prisma.recruitmentWorkflowStep.update({
+      where: { id: currentStepRecord.id },
+      data: { status: 'completed', completedAt: new Date(), actorId: userId, notes },
+    })
+  }
+
+  const nextStep = cycle.currentStep + 1
+  if (nextStep > 17) {
+    return prisma.recruitmentCycle.update({
+      where: { id: cycleId },
+      data: { status: 'completed', completedAt: new Date() },
+    })
+  }
+
+  const nextStepRecord = cycle.workflowSteps.find((s) => s.stepNumber === nextStep)
+  if (nextStepRecord) {
+    await prisma.recruitmentWorkflowStep.update({
+      where: { id: nextStepRecord.id },
+      data: { status: 'in_progress', startedAt: new Date() },
+    })
+  }
+
+  return prisma.recruitmentCycle.update({
+    where: { id: cycleId },
+    data: { currentStep: nextStep, status: recruitmentStatusForStep(nextStep) },
+  })
+}
+
+export async function allVerificationsComplete(applicationId: string): Promise<boolean> {
+  const verifications = await prisma.credentialVerification.findMany({
+    where: { applicationId },
+  })
+  if (verifications.length === 0) return false
+  return verifications.every((v) => v.status === 'verified' || v.status === 'waived')
+}
+
+export async function pushEmployeeToHCM(data: Record<string, unknown>) {
+  const { pushEmployeeToHCM: push } = await import('./integrations')
+  return push(data)
 }

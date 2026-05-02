@@ -9,17 +9,16 @@ export async function GET(req: Request) {
     await requireAuth()
     const { searchParams } = new URL(req.url)
     const applicationId = searchParams.get('applicationId')
-    const cycleId = searchParams.get('cycleId')
+    const recruitmentCycleId = searchParams.get('cycleId')
 
     const verifications = await withRetry(() =>
       prisma.credentialVerification.findMany({
         where: {
           ...(applicationId ? { applicationId } : {}),
-          ...(cycleId ? { application: { cycleId } } : {}),
+          ...(recruitmentCycleId ? { application: { recruitmentCycleId } } : {}),
         },
         include: {
-          application: { select: { id: true, applicationRef: true, surname: true, firstName: true } },
-          verifiedBy: { select: { id: true, name: true } },
+          application: { select: { id: true, applicationRef: true, lastName: true, firstName: true } },
         },
         orderBy: { createdAt: 'desc' },
       })
@@ -40,29 +39,34 @@ export async function POST(req: Request) {
 
     let integrationResult: { success: boolean; reference?: string; data?: any; error?: string } = { success: false }
 
-    // Run integration check based on type
     if (body.verificationType === 'nira_nin') {
-      integrationResult = await verifyNIN(body.referenceValue, body.firstName, body.surname)
+      integrationResult = await verifyNIN(body.referenceNumber, body.firstName, body.lastName)
     } else if (body.verificationType === 'uneb_uce') {
-      integrationResult = await verifyUNEB(body.referenceValue, body.yearObtained, 'UCE')
+      integrationResult = await verifyUNEB(body.referenceNumber, body.yearObtained, 'UCE')
+    } else if (body.verificationType === 'uneb_uace') {
+      integrationResult = await verifyUNEB(body.referenceNumber, body.yearObtained, 'UACE')
     } else if (body.verificationType === 'nche_degree') {
-      integrationResult = await verifyNCHE(body.referenceValue, body.institution)
+      integrationResult = await verifyNCHE(body.referenceNumber, body.institution)
     } else if (body.verificationType === 'ura_tin') {
-      integrationResult = await verifyTIN(body.referenceValue)
+      integrationResult = await verifyTIN(body.referenceNumber)
     }
+
+    const status = body.waived ? 'waived' : integrationResult.success ? 'verified' : 'failed'
 
     const verification = await withRetry(() =>
       prisma.credentialVerification.create({
         data: {
           applicationId: body.applicationId,
           verificationType: body.verificationType,
-          referenceValue: body.referenceValue,
-          status: body.waived ? 'waived' : integrationResult.success ? 'verified' : 'failed',
-          verifiedById: session.user.id,
-          externalReference: integrationResult.reference,
-          resultData: integrationResult.data ? JSON.stringify(integrationResult.data) : undefined,
+          referenceNumber: body.referenceNumber,
+          status,
+          verifiedBy: session.user.id,
+          result: integrationResult.success ? 'verified' : (integrationResult.error ? 'not_found' : undefined),
           notes: body.notes || integrationResult.error,
-          fraudFlag: body.fraudFlag ?? false,
+          verifiedAt: status === 'verified' ? new Date() : undefined,
+          waivedBy: body.waived ? session.user.id : undefined,
+          waivedAt: body.waived ? new Date() : undefined,
+          waivedReason: body.waived ? body.notes : undefined,
         },
       })
     )

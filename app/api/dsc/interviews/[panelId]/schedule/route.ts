@@ -13,7 +13,7 @@ export async function POST(req: Request, { params }: { params: { panelId: string
     const body = await req.json()
     const schedules: any[] = []
 
-    for (const slot of body.slots as Array<{ applicationId: string; scheduledAt: string; slotMinutes?: number }>) {
+    for (const slot of body.slots as Array<{ applicationId: string; scheduledDate: string; scheduledTime?: string; venue?: string; duration?: number }>) {
       const application = await withRetry(() =>
         prisma.pSCForm3Application.findUnique({ where: { id: slot.applicationId } })
       )
@@ -24,18 +24,20 @@ export async function POST(req: Request, { params }: { params: { panelId: string
           data: {
             panelId: params.panelId,
             applicationId: slot.applicationId,
-            scheduledAt: new Date(slot.scheduledAt),
-            slotMinutes: slot.slotMinutes ?? 30,
+            scheduledDate: new Date(slot.scheduledDate),
+            scheduledTime: slot.scheduledTime || '09:00',
+            venue: slot.venue || body.venue || 'DSC Boardroom',
+            duration: slot.duration ?? 30,
           },
         })
       )
       schedules.push(schedule)
 
       if (application.phone) {
-        const dateStr = new Date(slot.scheduledAt).toLocaleString('en-UG', { timeZone: 'Africa/Kampala' })
+        const dateStr = new Date(slot.scheduledDate).toLocaleDateString('en-UG')
         await sendSMS(
           application.phone,
-          `Dear ${application.firstName}, you are invited for interview on ${dateStr}. Ref: ${application.applicationRef}. DSC-HRMS`
+          `Dear ${application.firstName}, you are invited for interview on ${dateStr} at ${slot.scheduledTime || '09:00'}. Ref: ${application.applicationRef}. DSC-HRMS`
         )
       }
     }

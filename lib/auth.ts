@@ -108,3 +108,15 @@ export function canManageHR(role: UserRole): boolean {
 export function canViewAnalytics(role: UserRole): boolean {
   return (['SUPER_ADMIN', 'COMPANY_ADMIN', 'HR_MANAGER', 'DEPARTMENT_MANAGER'] as UserRole[]).includes(role)
 }
+
+export function canManageVacancies(role: UserRole): boolean {
+  return (['HOD', 'DHRO', 'CAO', 'SECRETARY_DSC', 'NATIONAL_ADMIN_MOPS', 'SUPER_ADMIN', 'COMPANY_ADMIN'] as UserRole[]).includes(role)
+}
+
+export function canIssueAppointment(role: UserRole): boolean {
+  return (['CAO', 'NATIONAL_ADMIN_MOPS', 'SUPER_ADMIN'] as UserRole[]).includes(role)
+}
+
+export function canScore(role: UserRole): boolean {
+  return (['DSC_CHAIRPERSON', 'DSC_MEMBER', 'COOPTED_TECHNICAL_SPECIALIST', 'HOD', 'NATIONAL_ADMIN_MOPS', 'SUPER_ADMIN'] as UserRole[]).includes(role)
+}

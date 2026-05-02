@@ -13,12 +13,12 @@ export async function GET(req: Request) {
     const adverts = await withRetry(() =>
       prisma.advert.findMany({
         where: {
-          cycle: { districtId: districtId || undefined },
+          ...(districtId ? { districtId } : {}),
           ...(status ? { status } : {}),
         },
         include: {
-          cycle: {
-            include: { vacancy: { include: { department: true, staffStructure: true } } },
+          recruitmentCycle: {
+            include: { vacancyDeclaration: { include: { staffStructure: true } } },
           },
           publicationLogs: true,
         },
@@ -38,25 +38,39 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
     const body = await req.json()
+
+    const cycle = await withRetry(() =>
+      prisma.recruitmentCycle.findUnique({ where: { id: body.recruitmentCycleId }, include: { district: true } })
+    )
+    if (!cycle) return NextResponse.json({ error: 'Recruitment cycle not found' }, { status: 404 })
+
     const advert = await withRetry(() =>
       prisma.advert.create({
         data: {
-          cycleId: body.cycleId,
-          title: body.title,
-          body: body.body,
-          closingDate: new Date(body.closingDate),
-          channels: body.channels ?? ['newspaper', 'website'],
-          applicationFee: body.applicationFee ?? 0,
-          createdById: session.user.id,
+          recruitmentCycleId: body.recruitmentCycleId,
+          districtId: cycle.districtId,
+          postTitle: body.postTitle || cycle.postTitle,
+          postRef: body.postRef || cycle.postRef,
+          grade: body.grade || cycle.grade,
+          salaryScale: body.salaryScale || cycle.grade,
+          dutyStation: body.dutyStation || cycle.district.name,
+          department: body.department || cycle.department,
+          eligibilityCriteria: body.eligibilityCriteria,
+          qualifications: body.qualifications,
+          experience: body.experience,
+          deadline: new Date(body.deadline),
+          preparedBy: session.user.id,
         },
       })
     )
+
     await createAuditEvent({
       entityType: 'Advert',
       entityId: advert.id,
       action: 'ADVERT_CREATED',
       actorId: session.user.id,
-      metadata: { cycleId: body.cycleId },
+      districtId: cycle.districtId,
+      metadata: { recruitmentCycleId: body.recruitmentCycleId },
     })
     return NextResponse.json({ data: advert }, { status: 201 })
   } catch (e: any) {

@@ -13,12 +13,11 @@ export async function GET(req: Request) {
     const vacancies = await withRetry(() =>
       prisma.vacancyDeclaration.findMany({
         where: {
-          districtId: districtId || undefined,
+          ...(districtId ? { districtId } : {}),
           ...(status ? { status } : {}),
         },
         include: {
           department: true,
-          declaredBy: { select: { id: true, name: true } },
           staffStructure: { include: { salaryScale: true } },
           wageBillClearances: { orderBy: { createdAt: 'desc' }, take: 1 },
         },
@@ -34,7 +33,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const session = await requireAuth()
-    if (!['HOD', 'DHRO', 'CAO', 'SECRETARY_DSC', 'NATIONAL_ADMIN_MOPS', 'SUPER_ADMIN', 'COMPANY_ADMIN'].includes(session.user.role)) {
+    if (!canManageVacancies(session.user.role as any)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
     const body = await req.json()
@@ -44,10 +43,13 @@ export async function POST(req: Request) {
           districtId: body.districtId || session.user.districtId!,
           departmentId: body.departmentId,
           staffStructureId: body.staffStructureId,
-          postsVacant: body.postsVacant,
-          reason: body.reason,
-          justification: body.justification,
-          declaredById: session.user.id,
+          postTitle: body.postTitle,
+          grade: body.grade,
+          vacancyReason: body.vacancyReason,
+          vacancyDate: body.vacancyDate ? new Date(body.vacancyDate) : new Date(),
+          numberOfVacancies: body.numberOfVacancies ?? 1,
+          hodId: session.user.id,
+          hodNotes: body.notes,
         },
       })
     )
@@ -57,7 +59,7 @@ export async function POST(req: Request) {
       action: 'VACANCY_DECLARED',
       actorId: session.user.id,
       districtId: vacancy.districtId,
-      metadata: { postsVacant: body.postsVacant, reason: body.reason },
+      metadata: { numberOfVacancies: vacancy.numberOfVacancies, reason: vacancy.vacancyReason },
     })
     return NextResponse.json({ data: vacancy }, { status: 201 })
   } catch (e: any) {

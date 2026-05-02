@@ -13,13 +13,14 @@ export async function GET(req: Request) {
       prisma.approvedStaffStructure.findMany({
         where: {
           ...(departmentId ? { departmentId } : {}),
-          ...(districtId ? { department: { districtId } } : {}),
+          ...(districtId ? { districtId } : {}),
         },
         include: {
+          district: true,
           department: true,
           salaryScale: true,
         },
-        orderBy: [{ department: { name: 'asc' } }, { postTitle: 'asc' }],
+        orderBy: [{ postTitle: 'asc' }],
       })
     )
     return NextResponse.json({ data: structure })
@@ -31,20 +32,25 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const session = await requireAuth()
-    if (!canManageVacancies(session.user.role)) {
+    if (!canManageVacancies(session.user.role as any)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
     const body = await req.json()
     const post = await withRetry(() =>
       prisma.approvedStaffStructure.create({
         data: {
+          districtId: body.districtId || session.user.districtId!,
           departmentId: body.departmentId,
-          postTitle: body.postTitle,
           salaryScaleId: body.salaryScaleId,
+          postTitle: body.postTitle,
+          postCode: body.postCode || body.postTitle.slice(0, 6).toUpperCase().replace(/\s/g, ''),
+          grade: body.grade,
           approvedPosts: body.approvedPosts,
           filledPosts: body.filledPosts ?? 0,
+          vacantPosts: body.vacantPosts ?? body.approvedPosts,
+          financialYear: body.financialYear || String(new Date().getFullYear()),
           minimumQualification: body.minimumQualification,
-          experienceYears: body.experienceYears ?? 0,
+          experienceRequired: body.experienceRequired,
           jobDescription: body.jobDescription,
         },
         include: { salaryScale: true },
