@@ -7,6 +7,8 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─── Existing Private-Sector Models ──────────────────────────────────────────
+
 model Company {
   id               String   @id @default(cuid())
   name             String
@@ -61,90 +63,94 @@ model Department {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String
-  password  String
-  role      String   @default("HR_OFFICER")
-  companyId String?
-  company   Company? @relation(fields: [companyId], references: [id])
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid())
+  email      String   @unique
+  name       String
+  password   String
+  role       String   @default("HR_OFFICER")
+  companyId  String?
+  company    Company? @relation(fields: [companyId], references: [id])
+  isActive   Boolean  @default(true)
+  // DSC-HRMS fields
+  districtId String?
+  district   District? @relation(fields: [districtId], references: [id])
+  dscRole    String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   auditLogs AuditLog[]
 }
 
 model Job {
-  id                 String    @id @default(cuid())
+  id                 String      @id @default(cuid())
   title              String
   departmentId       String?
   department         Department? @relation(fields: [departmentId], references: [id])
   companyId          String
-  company            Company   @relation(fields: [companyId], references: [id])
+  company            Company     @relation(fields: [companyId], references: [id])
   location           String?
-  employmentType     String    @default("FULL_TIME")
+  employmentType     String      @default("FULL_TIME")
   description        String?
   responsibilities   String?
-  requiredSkills     String[]  @default([])
-  preferredSkills    String[]  @default([])
+  requiredSkills     String[]    @default([])
+  preferredSkills    String[]    @default([])
   experienceLevel    String?
   education          String?
   salaryMin          Float?
   salaryMax          Float?
-  currency           String    @default("UGX")
+  currency           String      @default("UGX")
   deadline           DateTime?
-  status             String    @default("DRAFT")
-  screeningKeywords  String[]  @default([])
+  status             String      @default("DRAFT")
+  screeningKeywords  String[]    @default([])
   scoringCriteria    Json?
-  interviewQuestions String[]  @default([])
-  aiApproved         Boolean   @default(false)
-  publicSlug         String?   @unique
+  interviewQuestions String[]    @default([])
+  aiApproved         Boolean     @default(false)
+  publicSlug         String?     @unique
   embedCode          String?
   hiringManagerId    String?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
 
   candidates Candidate[]
 }
 
 model Candidate {
-  id              String    @id @default(cuid())
-  firstName       String
-  lastName        String
-  email           String
-  phone           String?
-  location        String?
-  linkedIn        String?
-  jobId           String
-  job             Job       @relation(fields: [jobId], references: [id])
-  resumeUrl       String?
-  resumeText      String?
-  resumeParsed    Json?
-  status          String    @default("RECEIVED")
-  screeningScore  Float?
-  screeningNotes  String?
-  screeningData   Json?
-  applicationDate DateTime  @default(now())
-  source          String?
-  notes           String?
+  id               String    @id @default(cuid())
+  firstName        String
+  lastName         String
+  email            String
+  phone            String?
+  location         String?
+  linkedIn         String?
+  jobId            String
+  job              Job       @relation(fields: [jobId], references: [id])
+  resumeUrl        String?
+  resumeText       String?
+  resumeParsed     Json?
+  status           String    @default("RECEIVED")
+  screeningScore   Float?
+  screeningNotes   String?
+  screeningData    Json?
+  applicationDate  DateTime  @default(now())
+  source           String?
+  notes            String?
   // Parsed resume fields
-  parsedName      String?
-  parsedEmail     String?
-  parsedPhone     String?
-  parsedLocation  String?
-  parsedEducation String?
+  parsedName       String?
+  parsedEmail      String?
+  parsedPhone      String?
+  parsedLocation   String?
+  parsedEducation  String?
   parsedExperience String?
-  parsedSkills    String[]  @default([])
-  parsedJobTitles String[]  @default([])
-  parsedEmployers String[]  @default([])
-  parsedYearsExp  Float?
-  certifications  String[]  @default([])
+  parsedSkills     String[]  @default([])
+  parsedJobTitles  String[]  @default([])
+  parsedEmployers  String[]  @default([])
+  parsedYearsExp   Float?
+  certifications   String[]  @default([])
   // Duplicate detection
-  isDuplicate     Boolean   @default(false)
-  duplicateOf     String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  isDuplicate      Boolean   @default(false)
+  duplicateOf      String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   interviews     Interview[]
   communications CandidateComm[]
@@ -235,62 +241,62 @@ model Offer {
 }
 
 model Employee {
-  id               String    @id @default(cuid())
-  candidateId      String?   @unique
-  candidate        Candidate? @relation(fields: [candidateId], references: [id])
-  companyId        String
-  company          Company   @relation(fields: [companyId], references: [id])
-  employeeOnboarding EmployeeOnboarding?
-  departmentId     String?
-  department       Department? @relation(fields: [departmentId], references: [id])
-  employeeNumber   String?
-  firstName        String
-  lastName         String
-  email            String
-  phone            String?
-  dateOfBirth      DateTime?
-  gender           String?
-  nationality      String?
-  address          String?
-  jobTitle         String
-  employmentType   String    @default("FULL_TIME")
-  startDate        DateTime
-  endDate          DateTime?
-  supervisorId     String?
-  salary           Float?
-  currency         String    @default("UGX")
-  paymentFrequency String?
-  allowances       Json?
-  benefits         Json?
-  deductions       Json?
+  id                    String     @id @default(cuid())
+  candidateId           String?    @unique
+  candidate             Candidate? @relation(fields: [candidateId], references: [id])
+  companyId             String
+  company               Company    @relation(fields: [companyId], references: [id])
+  employeeOnboarding    EmployeeOnboarding?
+  departmentId          String?
+  department            Department? @relation(fields: [departmentId], references: [id])
+  employeeNumber        String?
+  firstName             String
+  lastName              String
+  email                 String
+  phone                 String?
+  dateOfBirth           DateTime?
+  gender                String?
+  nationality           String?
+  address               String?
+  jobTitle              String
+  employmentType        String     @default("FULL_TIME")
+  startDate             DateTime
+  endDate               DateTime?
+  supervisorId          String?
+  salary                Float?
+  currency              String     @default("UGX")
+  paymentFrequency      String?
+  allowances            Json?
+  benefits              Json?
+  deductions            Json?
   // Uganda compliance fields
-  nssfNumber       String?
-  nssfRate         Float?    @default(10)
-  tinNumber        String?
-  payeRate         Float?
-  bankName         String?
-  bankAccount      String?
-  bankBranch       String?
-  mobileMoneyNumber String?
-  mobileMoneyProvider String?
+  nssfNumber            String?
+  nssfRate              Float?     @default(10)
+  tinNumber             String?
+  payeRate              Float?
+  bankName              String?
+  bankAccount           String?
+  bankBranch            String?
+  mobileMoneyNumber     String?
+  mobileMoneyProvider   String?
   // Leave
-  annualLeave      Float     @default(21)
-  sickLeave        Float     @default(10)
-  maternityLeave   Float?
-  paternityLeave   Float?
+  annualLeave           Float      @default(21)
+  sickLeave             Float      @default(10)
+  maternityLeave        Float?
+  paternityLeave        Float?
   // Contract / compliance
-  contractType     String?   // permanent | fixed_term | casual | probationary
-  contractEndDate  DateTime?
-  probationMonths  Int?      @default(3)
-  probationEndDate DateTime?
-  workPermitNumber String?
-  workPermitExpiry DateTime?
+  contractType          String?    // permanent | fixed_term | casual | probationary
+  contractEndDate       DateTime?
+  probationMonths       Int?       @default(3)
+  probationEndDate      DateTime?
+  workPermitNumber      String?
+  workPermitExpiry      DateTime?
   // Status
-  isActive         Boolean   @default(true)
-  terminationReason String?
-  terminationDate  DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  isActive              Boolean    @default(true)
+  terminationReason     String?
+  terminationDate       DateTime?
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
 
   onboarding          Onboarding?
   documents           EmployeeDocument[]
@@ -321,15 +327,18 @@ model Onboarding {
 }
 
 model EmployeeDocument {
-  id         String   @id @default(cuid())
-  employeeId String
-  employee   Employee @relation(fields: [employeeId], references: [id])
-  name       String
-  type       String
-  url        String
-  storageKey String?
-  uploadedBy String?
-  createdAt  DateTime @default(now())
+  id                          String                   @id @default(cuid())
+  employeeId                  String
+  employee                    Employee                 @relation(fields: [employeeId], references: [id])
+  // DSC-HRMS: optional link to government employee profile
+  employeeGovernmentProfileId String?
+  employeeGovernmentProfile   EmployeeGovernmentProfile? @relation(fields: [employeeGovernmentProfileId], references: [id])
+  name                        String
+  type                        String
+  url                         String
+  storageKey                  String?
+  uploadedBy                  String?
+  createdAt                   DateTime                 @default(now())
 }
 
 model FileUpload {
@@ -394,19 +403,19 @@ model CaseFile {
 }
 
 model LeaveRecord {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   employeeId String
-  employee   Employee @relation(fields: [employeeId], references: [id])
+  employee   Employee  @relation(fields: [employeeId], references: [id])
   leaveType  String
   startDate  DateTime
   endDate    DateTime
   days       Int
-  status     String   @default("pending") // pending | approved | rejected | cancelled
+  status     String    @default("pending") // pending | approved | rejected | cancelled
   reason     String?
   approvedBy String?
   approvedAt DateTime?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 }
 
 model SalaryHistory {
@@ -595,4 +604,1008 @@ model OnboardingActivityLog {
   action               String
   details              String?
   createdAt            DateTime           @default(now())
+}
+
+// ─── DSC-HRMS: Government Structure ──────────────────────────────────────────
+
+model District {
+  id               String   @id @default(cuid())
+  name             String
+  code             String   @unique
+  region           String
+  districtType     String   // district | city | municipality
+  headquarters     String
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  dsc                   DistrictServiceCommission?
+  departments           DistrictDepartment[]
+  staffStructures       ApprovedStaffStructure[]
+  establishmentNotices  EstablishmentNotice[]
+  vacancyDeclarations   VacancyDeclaration[]
+  recruitmentCycles     RecruitmentCycle[]
+  employees             EmployeeGovernmentProfile[]
+  users                 User[]
+  auditEvents           ImmutableAuditEvent[]
+  salaryScales          SalaryScale[]
+}
+
+model DistrictServiceCommission {
+  id              String    @id @default(cuid())
+  districtId      String    @unique
+  district        District  @relation(fields: [districtId], references: [id])
+  name            String
+  establishedDate DateTime
+  chairpersonId   String?
+  secretaryId     String?
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  members DSCMember[]
+  minutes DSCMinute[]
+}
+
+model DSCMember {
+  id            String                    @id @default(cuid())
+  dscId         String
+  dsc           DistrictServiceCommission @relation(fields: [dscId], references: [id])
+  userId        String
+  memberType    String                    // chairperson | member | secretary | coopted
+  title         String
+  profession    String
+  appointedDate DateTime
+  expiryDate    DateTime?
+  isActive      Boolean                   @default(true)
+  createdAt     DateTime                  @default(now())
+}
+
+model DistrictDepartment {
+  id         String   @id @default(cuid())
+  districtId String
+  district   District @relation(fields: [districtId], references: [id])
+  name       String
+  code       String
+  hodId      String?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  staffStructures     ApprovedStaffStructure[]
+  vacancyDeclarations VacancyDeclaration[]
+}
+
+model SalaryScale {
+  id             String   @id @default(cuid())
+  districtId     String?
+  district       District? @relation(fields: [districtId], references: [id])
+  scaleCode      String   // U1–U8
+  scaleLevel     String
+  minimumSalary  Float
+  maximumSalary  Float
+  currency       String   @default("UGX")
+  effectiveFrom  DateTime
+  financialYear  String
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  staffStructures ApprovedStaffStructure[]
+  employees       EmployeeGovernmentProfile[]
+}
+
+model ApprovedStaffStructure {
+  id                   String              @id @default(cuid())
+  districtId           String
+  district             District            @relation(fields: [districtId], references: [id])
+  departmentId         String?
+  department           DistrictDepartment? @relation(fields: [departmentId], references: [id])
+  salaryScaleId        String?
+  salaryScale          SalaryScale?        @relation(fields: [salaryScaleId], references: [id])
+  postTitle            String
+  postCode             String
+  grade                String
+  approvedPosts        Int
+  filledPosts          Int                 @default(0)
+  vacantPosts          Int                 @default(0)
+  underRecruitment     Int                 @default(0)
+  financialYear        String
+  schemeOfService      String?
+  jobDescription       String?
+  personSpec           String?
+  minimumQualification String?
+  experienceRequired   String?
+  ageRange             String?
+  isActive             Boolean             @default(true)
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  vacancyDeclarations VacancyDeclaration[]
+}
+
+// ─── DSC-HRMS: Establishment Control ─────────────────────────────────────────
+
+model EstablishmentNotice {
+  id             String    @id @default(cuid())
+  districtId     String
+  district       District  @relation(fields: [districtId], references: [id])
+  noticeNumber   String    @unique
+  financialYear  String
+  approvedPosts  Int
+  wageEnvelope   Float
+  currency       String    @default("UGX")
+  issuedBy       String
+  issuedDate     DateTime
+  effectiveFrom  DateTime
+  effectiveTo    DateTime?
+  status         String    @default("active") // active | expired | suspended
+  notes          String?
+  documentUrl    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  wageBillClearances WageBillClearance[]
+  recruitmentCycles  RecruitmentCycle[]
+}
+
+model VacancyDeclaration {
+  id               String                  @id @default(cuid())
+  districtId       String
+  district         District                @relation(fields: [districtId], references: [id])
+  departmentId     String?
+  department       DistrictDepartment?     @relation(fields: [departmentId], references: [id])
+  staffStructureId String?
+  staffStructure   ApprovedStaffStructure? @relation(fields: [staffStructureId], references: [id])
+  postTitle        String
+  grade            String
+  vacancyReason    String                  // retirement | death | resignation | new_post | promotion | transfer
+  vacancyDate      DateTime
+  numberOfVacancies Int                   @default(1)
+  hodId            String?
+  hodNotes         String?
+  dhroId           String?
+  dhroNotes        String?
+  status           String                  @default("declared") // declared | consolidated | cleared | under_recruitment | filled | cancelled
+  consolidatedDate DateTime?
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+
+  wageBillClearances WageBillClearance[]
+  recruitmentCycles  RecruitmentCycle[]
+}
+
+model WageBillClearance {
+  id                    String               @id @default(cuid())
+  districtId            String
+  establishmentNoticeId String?
+  establishmentNotice   EstablishmentNotice? @relation(fields: [establishmentNoticeId], references: [id])
+  vacancyDeclarationId  String?
+  vacancyDeclaration    VacancyDeclaration?  @relation(fields: [vacancyDeclarationId], references: [id])
+  requestedBy           String
+  requestedAt           DateTime
+  approvedBy            String?
+  approvedAt            DateTime?
+  financialYear         String
+  postsRequested        Int
+  wageImpact            Float
+  status                String               @default("pending") // pending | approved | rejected | under_review
+  mopsRef               String?
+  notes                 String?
+  documentUrl           String?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+}
+
+// ─── DSC-HRMS: Recruitment Cycle ─────────────────────────────────────────────
+
+model RecruitmentCycle {
+  id                    String               @id @default(cuid())
+  districtId            String
+  district              District             @relation(fields: [districtId], references: [id])
+  establishmentNoticeId String?
+  establishmentNotice   EstablishmentNotice? @relation(fields: [establishmentNoticeId], references: [id])
+  vacancyDeclarationId  String?
+  vacancyDeclaration    VacancyDeclaration?  @relation(fields: [vacancyDeclarationId], references: [id])
+  postTitle             String
+  postRef               String               @unique
+  grade                 String
+  department            String
+  numberOfPosts         Int                  @default(1)
+  currentStep           Int                  @default(1)
+  status                String               @default("step_1_vacancy_declared")
+  secretaryId           String?
+  chairpersonId         String?
+  financialYear         String
+  startedAt             DateTime?
+  completedAt           DateTime?
+  notes                 String?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  advert              Advert?
+  applications        PSCForm3Application[]
+  shortlistingPanel   ShortlistingPanel?
+  interviewPanel      InterviewPanel?
+  dscMinutes          DSCMinute[]
+  appointmentDecisions AppointmentDecision[]
+  workflowSteps       RecruitmentWorkflowStep[]
+  auditEvents         ImmutableAuditEvent[]
+}
+
+model RecruitmentWorkflowStep {
+  id                  String           @id @default(cuid())
+  recruitmentCycleId  String
+  recruitmentCycle    RecruitmentCycle @relation(fields: [recruitmentCycleId], references: [id])
+  stepNumber          Int
+  stepName            String
+  actorRole           String
+  actorId             String?
+  status              String           @default("pending") // pending | in_progress | completed | blocked | skipped
+  startedAt           DateTime?
+  completedAt         DateTime?
+  notes               String?
+  documentsGenerated  String[]         @default([])
+  blockers            String?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+}
+
+// ─── DSC-HRMS: Advertisement ──────────────────────────────────────────────────
+
+model Advert {
+  id                      String           @id @default(cuid())
+  recruitmentCycleId      String           @unique
+  recruitmentCycle        RecruitmentCycle @relation(fields: [recruitmentCycleId], references: [id])
+  districtId              String
+  postTitle               String
+  postRef                 String
+  grade                   String
+  salaryScale             String
+  dutyStation             String
+  department              String
+  eligibilityCriteria     String?
+  qualifications          String?
+  experience              String?
+  ageRange                String?
+  applicationInstructions String?
+  deadline                DateTime
+  preparedBy              String?
+  approvedBy              String?
+  approvedAt              DateTime?
+  minuteItemRef           String?
+  status                  String           @default("draft") // draft | pending_approval | approved | published | closed | cancelled
+  publishedAt             DateTime?
+  closedAt                DateTime?
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
+
+  publicationLogs AdvertPublicationLog[]
+}
+
+model AdvertPublicationLog {
+  id           String   @id @default(cuid())
+  advertId     String
+  advert       Advert   @relation(fields: [advertId], references: [id])
+  channel      String   // website | notice_board_pdf | mops_portal | psc_portal | hcm_job_portal | fm_radio | newspaper | sms_broadcast
+  status       String   @default("pending") // pending | successful | failed | manual_required
+  publishedAt  DateTime?
+  reference    String?
+  notes        String?
+  errorMessage String?
+  createdAt    DateTime @default(now())
+}
+
+// ─── DSC-HRMS: Applications (PSC Form 3) ─────────────────────────────────────
+
+model PSCForm3Application {
+  id                  String           @id @default(cuid())
+  recruitmentCycleId  String
+  recruitmentCycle    RecruitmentCycle @relation(fields: [recruitmentCycleId], references: [id])
+  districtId          String
+  postRef             String
+  intakeChannel       String           @default("online") // online | ussd | paper
+  firstName           String
+  lastName            String
+  otherNames          String?
+  nin                 String?
+  dateOfBirth         DateTime?
+  gender              String?
+  pwdStatus           Boolean          @default(false)
+  nationality         String?
+  subCounty           String?
+  district            String?
+  region              String?
+  phone               String?
+  alternatePhone      String?
+  email               String?
+  postalAddress       String?
+  educationHistory    Json?
+  qualifications      Json?
+  employmentHistory   Json?
+  professionalBodies  Json?
+  referees            Json?
+  applicationRef      String           @unique
+  submittedAt         DateTime?
+  status              String           @default("received") // received | under_review | shortlisted | rejected | withdrawn | invited | selected | appointed | reserve | deferred
+  rejectionReason     String?
+  duplicateFlag       Boolean          @default(false)
+  duplicateOf         String?
+  ninVerified         Boolean          @default(false)
+  documentComplete    Boolean          @default(false)
+  scannedFormUrl      String?
+  ocrExtracted        Json?
+  clerkVerifiedBy     String?
+  clerkVerifiedAt     DateTime?
+  clerkLocked         Boolean          @default(false)
+  ussdSessionId       String?
+  isDraft             Boolean          @default(false)
+  lastSavedAt         DateTime?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  documents          ApplicationDocument[]
+  shortlistingScores ShortlistingScore[]
+  shortlistDecision  ShortlistDecision?
+  interviewSchedules InterviewSchedule[]
+  interviewScores    InterviewScore[]
+  verifications      CredentialVerification[]
+  refereeReports     RefereeReport[]
+  appointmentDecision AppointmentDecision?
+  appointmentLetter  AppointmentLetter?
+  oathRecord         OathRecord?
+  fraudFlags         FraudFlag[]
+}
+
+model ApplicationDocument {
+  id            String              @id @default(cuid())
+  applicationId String
+  application   PSCForm3Application @relation(fields: [applicationId], references: [id])
+  documentType  String
+  documentName  String
+  fileUrl       String
+  storageKey    String?
+  isVerified    Boolean             @default(false)
+  verifiedBy    String?
+  verifiedAt    DateTime?
+  forgeryFlag   Boolean             @default(false)
+  uploadedAt    DateTime            @default(now())
+}
+
+// ─── DSC-HRMS: Shortlisting ───────────────────────────────────────────────────
+
+model ShortlistingPanel {
+  id                String           @id @default(cuid())
+  recruitmentCycleId String          @unique
+  recruitmentCycle  RecruitmentCycle @relation(fields: [recruitmentCycleId], references: [id])
+  createdBy         String
+  lockedBy          String?
+  lockedAt          DateTime?
+  approvedBy        String?
+  approvedAt        DateTime?
+  minuteRef         String?
+  status            String           @default("open") // open | scoring | locked | approved | published
+  scoringCriteria   Json?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  panelMembers ShortlistPanelMember[]
+  scores       ShortlistingScore[]
+  decisions    ShortlistDecision[]
+}
+
+model ShortlistPanelMember {
+  id           String            @id @default(cuid())
+  panelId      String
+  panel        ShortlistingPanel @relation(fields: [panelId], references: [id])
+  memberId     String
+  memberRole   String            // dsc_chairperson | dsc_member | secretary
+  hasSubmitted Boolean           @default(false)
+  submittedAt  DateTime?
+  createdAt    DateTime          @default(now())
+}
+
+model ShortlistingScore {
+  id            String              @id @default(cuid())
+  panelId       String
+  panel         ShortlistingPanel   @relation(fields: [panelId], references: [id])
+  applicationId String
+  application   PSCForm3Application @relation(fields: [applicationId], references: [id])
+  scorerId      String
+  scores        Json
+  overallResult String?
+  notes         String?
+  isSubmitted   Boolean             @default(false)
+  submittedAt   DateTime?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  @@unique([panelId, applicationId, scorerId])
+}
+
+model ShortlistDecision {
+  id             String              @id @default(cuid())
+  panelId        String
+  panel          ShortlistingPanel   @relation(fields: [panelId], references: [id])
+  applicationId  String              @unique
+  application    PSCForm3Application @relation(fields: [applicationId], references: [id])
+  finalDecision  String              // shortlisted | rejected | reserve | conditional
+  rejectionReason String?
+  decisionBy     String?
+  approvedBy     String?
+  approvedAt     DateTime?
+  notifiedAt     DateTime?
+  createdAt      DateTime            @default(now())
+}
+
+// ─── DSC-HRMS: Interviews ─────────────────────────────────────────────────────
+
+model InterviewPanel {
+  id                 String           @id @default(cuid())
+  recruitmentCycleId String           @unique
+  recruitmentCycle   RecruitmentCycle @relation(fields: [recruitmentCycleId], references: [id])
+  createdBy          String
+  status             String           @default("scheduling") // scheduling | active | completed | cancelled
+  scoringCriteria    Json?
+  testRequired       Boolean          @default(false)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  panelMembers  InterviewPanelMember[]
+  schedules     InterviewSchedule[]
+  scores        InterviewScore[]
+  writtenTests  WrittenTest[]
+}
+
+model InterviewPanelMember {
+  id         String         @id @default(cuid())
+  panelId    String
+  panel      InterviewPanel @relation(fields: [panelId], references: [id])
+  memberId   String
+  memberRole String         // dsc_chairperson | secretary_dsc | hod | dsc_member | coopted | esc_rep | hsc_rep
+  hasScored  Boolean        @default(false)
+  createdAt  DateTime       @default(now())
+}
+
+model InterviewSchedule {
+  id               String              @id @default(cuid())
+  panelId          String
+  panel            InterviewPanel      @relation(fields: [panelId], references: [id])
+  applicationId    String
+  application      PSCForm3Application @relation(fields: [applicationId], references: [id])
+  scheduledDate    DateTime
+  scheduledTime    String
+  venue            String
+  duration         Int                 @default(30)
+  candidateStatus  String              @default("invited") // invited | confirmed | declined | reschedule_requested | attended | absent
+  invitedAt        DateTime?
+  confirmedAt      DateTime?
+  notes            String?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  scores InterviewScore[]
+}
+
+model InterviewScore {
+  id             String              @id @default(cuid())
+  panelId        String
+  panel          InterviewPanel      @relation(fields: [panelId], references: [id])
+  applicationId  String
+  application    PSCForm3Application @relation(fields: [applicationId], references: [id])
+  scheduleId     String?
+  schedule       InterviewSchedule?  @relation(fields: [scheduleId], references: [id])
+  scorerId       String
+  scores         Json
+  totalScore     Float
+  recommendation String             // appointed | reserve | rejected | deferred
+  notes          String?
+  isSubmitted    Boolean             @default(false)
+  submittedAt    DateTime?
+  createdAt      DateTime            @default(now())
+
+  @@unique([panelId, applicationId, scorerId])
+}
+
+model WrittenTest {
+  id          String         @id @default(cuid())
+  panelId     String
+  panel       InterviewPanel @relation(fields: [panelId], references: [id])
+  testName    String
+  testDate    DateTime
+  duration    Int
+  maxScore    Float          @default(100)
+  passMark    Float          @default(50)
+  cadre       String?
+  testFileUrl String?
+  status      String         @default("scheduled") // scheduled | administered | scored | cancelled
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  results WrittenTestResult[]
+}
+
+model WrittenTestResult {
+  id            String      @id @default(cuid())
+  testId        String
+  test          WrittenTest @relation(fields: [testId], references: [id])
+  applicationId String
+  score         Float
+  passed        Boolean
+  scannedUrl    String?
+  markedBy      String?
+  createdAt     DateTime    @default(now())
+}
+
+// ─── DSC-HRMS: Verification ───────────────────────────────────────────────────
+
+model CredentialVerification {
+  id               String              @id @default(cuid())
+  applicationId    String
+  application      PSCForm3Application @relation(fields: [applicationId], references: [id])
+  verificationType String              // nira_nin | uneb_uce | uneb_uace | nche_degree | professional_body | integrity | referee
+  providerName     String?
+  referenceNumber  String?
+  status           String              @default("pending") // pending | submitted | verified | failed | waived
+  result           String?             // verified | not_found | mismatch | forgery_suspected
+  verifiedAt       DateTime?
+  verifiedBy       String?
+  waivedBy         String?
+  waivedAt         DateTime?
+  waivedReason     String?
+  integrationLogId String?
+  notes            String?
+  documentUrl      String?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+}
+
+model RefereeReport {
+  id              String              @id @default(cuid())
+  applicationId   String
+  application     PSCForm3Application @relation(fields: [applicationId], references: [id])
+  refereeName     String
+  refereeTitle    String?
+  refereeOrg      String?
+  refereeEmail    String?
+  refereePhone    String?
+  sentAt          DateTime?
+  receivedAt      DateTime?
+  reportUrl       String?
+  summary         String?
+  recommendation  String?             // highly_recommended | recommended | not_recommended
+  status          String              @default("pending") // pending | sent | received | reviewed
+  createdAt       DateTime            @default(now())
+}
+
+// ─── DSC-HRMS: DSC Minutes ────────────────────────────────────────────────────
+
+model DSCMinute {
+  id                 String                    @id @default(cuid())
+  dscId              String
+  dsc                DistrictServiceCommission @relation(fields: [dscId], references: [id])
+  recruitmentCycleId String?
+  recruitmentCycle   RecruitmentCycle?         @relation(fields: [recruitmentCycleId], references: [id])
+  minuteNumber       String
+  sessionDate        DateTime
+  sessionType        String                    // ordinary | extraordinary | special
+  agenda             String?
+  decisions          Json?
+  minuteText         String?
+  draftedBy          String?
+  approvedBy         String?
+  approvedAt         DateTime?
+  minuteUrl          String?
+  status             String                    @default("draft") // draft | approved | gazetted
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+}
+
+// ─── DSC-HRMS: Appointment ────────────────────────────────────────────────────
+
+model AppointmentDecision {
+  id                 String              @id @default(cuid())
+  recruitmentCycleId String
+  recruitmentCycle   RecruitmentCycle    @relation(fields: [recruitmentCycleId], references: [id])
+  applicationId      String              @unique
+  application        PSCForm3Application @relation(fields: [applicationId], references: [id])
+  dscDecision        String              // appointed | reserve | rejected | deferred
+  decisionDate       DateTime
+  minuteRef          String?
+  postTitle          String
+  grade              String
+  salaryScale        String?
+  dutyStation        String
+  reportingOfficer   String?
+  probationMonths    Int                 @default(12)
+  effectiveDate      DateTime?
+  decidedBy          String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+}
+
+model AppointmentLetter {
+  id               String              @id @default(cuid())
+  applicationId    String              @unique
+  application      PSCForm3Application @relation(fields: [applicationId], references: [id])
+  letterRef        String              @unique
+  postTitle        String
+  grade            String
+  salaryScale      String?
+  effectiveDate    DateTime
+  dutyStation      String
+  reportingOfficer String?
+  probationMonths  Int                 @default(12)
+  acceptanceDeadline DateTime
+  letterText       String?
+  letterUrl        String?
+  signedByCao      Boolean             @default(false)
+  caoSignatureDate DateTime?
+  caoId            String?
+  signatureUrl     String?
+  deliveredVia     String[]            @default([])
+  deliveredAt      DateTime?
+  acceptanceStatus String              @default("pending") // pending | accepted | declined | expired
+  acceptedAt       DateTime?
+  acceptedByName   String?
+  acceptanceMethod String?             // online | sms | physical
+  declinedReason   String?
+  status           String              @default("draft") // draft | signed | delivered | accepted | declined | revoked
+  revokedAt        DateTime?
+  revokedReason    String?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+}
+
+model OathRecord {
+  id             String              @id @default(cuid())
+  applicationId  String              @unique
+  application    PSCForm3Application @relation(fields: [applicationId], references: [id])
+  oathType       String              // allegiance | secrecy | both
+  administeredBy String?
+  administeredAt DateTime?
+  venue          String?
+  witnessedBy    String?
+  documentUrl    String?
+  status         String              @default("pending") // pending | administered | documented
+  createdAt      DateTime            @default(now())
+}
+
+// ─── DSC-HRMS: Employee Government Profile ────────────────────────────────────
+
+model EmployeeGovernmentProfile {
+  id                    String      @id @default(cuid())
+  districtId            String
+  district              District    @relation(fields: [districtId], references: [id])
+  salaryScaleId         String?
+  salaryScale           SalaryScale? @relation(fields: [salaryScaleId], references: [id])
+  employeeNumber        String      @unique
+  firstName             String
+  lastName              String
+  otherNames            String?
+  nin                   String      @unique
+  tinNumber             String?
+  nssfNumber            String?
+  dateOfBirth           DateTime
+  gender                String
+  pwdStatus             Boolean     @default(false)
+  nationality           String      @default("Ugandan")
+  phone                 String?
+  email                 String?
+  postTitle             String
+  grade                 String
+  department            String
+  dutyStation           String
+  reportingOfficer      String?
+  appointmentDate       DateTime
+  confirmationDate      DateTime?
+  employmentStatus      String      @default("active") // active | on_leave | suspended | retired | deceased | resigned | dismissed
+  contractType          String      @default("permanent") // permanent | contract | acting
+  bankName              String?
+  bankAccount           String?
+  bankBranch            String?
+  hcmEmployeeId         String?
+  hcmSyncStatus         String      @default("pending") // pending | synced | failed
+  hcmSyncedAt           DateTime?
+  cscInductionEnrolled  Boolean     @default(false)
+  cscInductionDate      DateTime?
+  cscInductionCompleted Boolean     @default(false)
+  annualLeaveBalance    Float       @default(21)
+  sickLeaveBalance      Float       @default(30)
+  maternityLeaveBalance Float       @default(60)
+  paternityLeaveBalance Float       @default(4)
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  deploymentHistory DeploymentRecord[]
+  salaryHistory     GovernmentSalaryHistory[]
+  leaveRequests     LeaveRequest[]
+  disciplineCases   DisciplineCase[]
+  grievanceCases    GrievanceCase[]
+  probationRecord   ProbationRecord?
+  payrollCerts      PayrollCertification[]
+  hcmSyncRecords    HcmSyncRecord[]
+  documents         EmployeeDocument[]
+}
+
+model DeploymentRecord {
+  id          String                    @id @default(cuid())
+  employeeId  String
+  employee    EmployeeGovernmentProfile @relation(fields: [employeeId], references: [id])
+  type        String                    // transfer | promotion | acting | secondment | demotion
+  fromPost    String?
+  toPost      String
+  fromDept    String?
+  toDept      String?
+  fromGrade   String?
+  toGrade     String?
+  effectiveDate DateTime
+  endDate     DateTime?
+  reason      String?
+  authorizedBy String?
+  documentUrl String?
+  createdAt   DateTime                  @default(now())
+}
+
+model GovernmentSalaryHistory {
+  id            String                    @id @default(cuid())
+  employeeId    String
+  employee      EmployeeGovernmentProfile @relation(fields: [employeeId], references: [id])
+  salaryScale   String
+  grossSalary   Float
+  currency      String                    @default("UGX")
+  effectiveDate DateTime
+  financialYear String
+  reason        String?
+  approvedBy    String?
+  createdAt     DateTime                  @default(now())
+}
+
+model HcmSyncRecord {
+  id           String                    @id @default(cuid())
+  employeeId   String
+  employee     EmployeeGovernmentProfile @relation(fields: [employeeId], references: [id])
+  syncType     String                    // create | update | terminate
+  payload      Json
+  response     Json?
+  status       String                    @default("pending") // pending | success | failed
+  errorMessage String?
+  syncedAt     DateTime?
+  createdAt    DateTime                  @default(now())
+}
+
+// ─── DSC-HRMS: Probation ──────────────────────────────────────────────────────
+
+model ProbationRecord {
+  id               String                    @id @default(cuid())
+  employeeId       String                    @unique
+  employee         EmployeeGovernmentProfile @relation(fields: [employeeId], references: [id])
+  probationMonths  Int                       @default(12)
+  startDate        DateTime
+  expectedEndDate  DateTime
+  actualEndDate    DateTime?
+  status           String                    @default("on_probation") // on_probation | extended | confirmed | terminated
+  extensionMonths  Int?
+  extensionReason  String?
+  dscDecision      String?
+  dscDecisionDate  DateTime?
+  minuteRef        String?
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+
+  reviews      ProbationReview[]
+  confirmation ConfirmationDecision?
+}
+
+model ProbationReview {
+  id              String          @id @default(cuid())
+  probationId     String
+  probation       ProbationRecord @relation(fields: [probationId], references: [id])
+  reviewMonth     Int
+  reviewType      String          // progress | final
+  submittedBy     String?
+  submittedAt     DateTime?
+  performance     String?         // excellent | good | satisfactory | unsatisfactory
+  narrative       String?
+  recommendation  String?         // confirm | extend | terminate
+  documentUrl     String?
+  status          String          @default("pending") // pending | submitted | reviewed
+  createdAt       DateTime        @default(now())
+}
+
+model ConfirmationDecision {
+  id           String          @id @default(cuid())
+  probationId  String          @unique
+  probation    ProbationRecord @relation(fields: [probationId], references: [id])
+  decision     String          // confirmed | extended | terminated
+  decisionDate DateTime
+  effectiveDate DateTime?
+  minuteRef    String?
+  letterUrl    String?
+  decidedBy    String?
+  notes        String?
+  createdAt    DateTime        @default(now())
+}
+
+// ─── DSC-HRMS: Leave ──────────────────────────────────────────────────────────
+
+model LeaveRequest {
+  id               String                    @id @default(cuid())
+  employeeId       String
+  employee         EmployeeGovernmentProfile @relation(fields: [employeeId], references: [id])
+  districtId       String
+  leaveType        String                    // annual | sick | maternity | paternity | study | compassionate | unpaid
+  startDate        DateTime
+  endDate          DateTime
+  days             Int
+  reason           String?
+  reliefOfficer    String?
+  status           String                    @default("pending") // pending | approved | rejected | cancelled | recalled
+  approvedBy       String?
+  approvedAt       DateTime?
+  rejectionReason  String?
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+}
+
+// ─── DSC-HRMS: Discipline & Grievance ────────────────────────────────────────
+
+model DisciplineCase {
+  id               String                    @id @default(cuid())
+  employeeId       String
+  employee         EmployeeGovernmentProfile @relation(fields: [employeeId], references: [id])
+  districtId       String
+  caseRef          String                    @unique
+  allegation       String
+  showCauseIssued  Boolean                   @default(false)
+  showCauseDate    DateTime?
+  responseReceived Boolean                   @default(false)
+  hearingDate      DateTime?
+  panelMembers     String[]                  @default([])
+  findings         String?
+  dscDecision      String?                   // warning | demotion | dismissal | no_case | suspended_sentence
+  decisionDate     DateTime?
+  minuteRef        String?
+  appealStatus     String                    @default("none") // none | appealed | upheld | dismissed
+  documentUrls     String[]                  @default([])
+  status           String                    @default("investigation") // investigation | show_cause | hearing | decided | appeal | closed
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+}
+
+model GrievanceCase {
+  id             String                    @id @default(cuid())
+  employeeId     String
+  employee       EmployeeGovernmentProfile @relation(fields: [employeeId], references: [id])
+  districtId     String
+  caseRef        String                    @unique
+  grievanceType  String                    // working_conditions | discrimination | harassment | pay | promotion | other
+  description    String
+  against        String?
+  filedDate      DateTime
+  status         String                    @default("filed") // filed | acknowledged | mediation | hearing | resolved | escalated | closed
+  resolution     String?
+  resolvedAt     DateTime?
+  documentUrls   String[]                  @default([])
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+}
+
+// ─── DSC-HRMS: Payroll & Ghost Worker ────────────────────────────────────────
+
+model PayrollCertification {
+  id             String                     @id @default(cuid())
+  districtId     String
+  employeeId     String?
+  employee       EmployeeGovernmentProfile? @relation(fields: [employeeId], references: [id])
+  period         String
+  dhroId         String
+  certifiedAt    DateTime
+  payrollAmount  Float
+  employeeCount  Int
+  discrepancies  Json?
+  status         String                     @default("draft") // draft | certified | submitted | queried
+  notes          String?
+  createdAt      DateTime                   @default(now())
+}
+
+model GhostWorkerFlag {
+  id            String    @id @default(cuid())
+  districtId    String
+  employeeId    String?
+  employeeRef   String
+  flagType      String    // payroll_no_profile | nira_mismatch | ifms_mismatch | duplicate_nin | no_active_status
+  description   String
+  flaggedBy     String
+  flaggedAt     DateTime
+  investigatedBy String?
+  status        String    @default("open") // open | investigating | cleared | confirmed_ghost | referred
+  resolution    String?
+  resolvedAt    DateTime?
+  iggReferral   Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+}
+
+// ─── DSC-HRMS: Supporting ─────────────────────────────────────────────────────
+
+model FraudFlag {
+  id             String               @id @default(cuid())
+  applicationId  String?
+  application    PSCForm3Application? @relation(fields: [applicationId], references: [id])
+  districtId     String
+  flagType       String               // duplicate_nin | fast_shortlisting | identical_scores | appointment_no_verification | applicant_spike | payroll_no_employee
+  description    String
+  severity       String               @default("medium") // low | medium | high | critical
+  detectedAt     DateTime             @default(now())
+  detectedBy     String?
+  reviewedBy     String?
+  status         String               @default("open") // open | under_review | cleared | escalated | referred_igg
+  iggReferralRef String?
+  notes          String?
+  createdAt      DateTime             @default(now())
+}
+
+model IntegrationLog {
+  id              String    @id @default(cuid())
+  integration     String    // hcm | psc | nira | ura | ugpass | ifms | uneb | nche | africas_talking | csc | mops
+  direction       String    // outbound | inbound
+  endpoint        String
+  requestPayload  Json?
+  responsePayload Json?
+  statusCode      Int?
+  status          String    @default("pending") // pending | success | failed | timeout
+  errorMessage    String?
+  retryCount      Int       @default(0)
+  executedAt      DateTime  @default(now())
+  duration        Int?
+}
+
+model StatutoryReport {
+  id            String    @id @default(cuid())
+  districtId    String
+  reportType    String    // quarterly_dsc | annual_hr_return | monthly_payroll | oag_audit | igg_fraud | affirmative_action | national_aggregate
+  period        String
+  generatedBy   String
+  generatedAt   DateTime
+  reportUrl     String?
+  dataSnapshot  Json?
+  status        String    @default("draft") // draft | submitted | accepted | queried
+  submittedTo   String?
+  submittedAt   DateTime?
+  notes         String?
+  createdAt     DateTime  @default(now())
+}
+
+model DataProtectionRequest {
+  id            String    @id @default(cuid())
+  requestType   String    // access | correction | erasure | objection
+  requestedBy   String
+  email         String?
+  phone         String?
+  description   String
+  districtId    String?
+  status        String    @default("received") // received | under_review | completed | rejected
+  handledBy     String?
+  completedAt   DateTime?
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model ImmutableAuditEvent {
+  id                String            @id @default(cuid())
+  districtId        String?
+  district          District?         @relation(fields: [districtId], references: [id])
+  recruitmentCycleId String?
+  recruitmentCycle  RecruitmentCycle? @relation(fields: [recruitmentCycleId], references: [id])
+  timestamp         DateTime          @default(now())
+  actorId           String
+  actorRole         String
+  action            String
+  entityType        String
+  entityId          String
+  beforeStateHash   String?
+  afterStateHash    String?
+  ipAddress         String?
+  userAgent         String?
+  metadata          Json?
 }
