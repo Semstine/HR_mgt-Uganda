@@ -24,7 +24,7 @@ export default function Header({ title, subtitle }: HeaderProps) {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="search"
-            placeholder="Search…"
+            placeholder="Search DSC records..."
             className="pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-56 bg-gray-50"
           />
         </div>

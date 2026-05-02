@@ -2,13 +2,15 @@ import { type NextAuthOptions, getServerSession } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import { prisma } from './prisma'
-import type { UserRole } from '@/types'
+import type { DscRole, UserRole } from '@/types'
 
 declare module 'next-auth' {
   interface User {
     id: string
     role: UserRole
     companyId: string | null
+    districtId?: string | null
+    dscRole?: DscRole | null
   }
   interface Session {
     user: User & { name: string; email: string }
@@ -20,6 +22,8 @@ declare module 'next-auth/jwt' {
     id: string
     role: UserRole
     companyId: string | null
+    districtId?: string | null
+    dscRole?: DscRole | null
   }
 }
 
@@ -47,8 +51,10 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           name: user.name,
           email: user.email,
-          role: user.role as UserRole,
+          role: (user.dscRole || user.role) as UserRole,
           companyId: user.companyId,
+          districtId: user.districtId,
+          dscRole: user.dscRole as DscRole | null,
         }
       },
     }),
@@ -59,6 +65,8 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id
         token.role = user.role
         token.companyId = user.companyId
+        token.districtId = user.districtId
+        token.dscRole = user.dscRole
       }
       return token
     },
@@ -67,6 +75,8 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id
         session.user.role = token.role
         session.user.companyId = token.companyId
+        session.user.districtId = token.districtId
+        session.user.dscRole = token.dscRole
       }
       return session
     },

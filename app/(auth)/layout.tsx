@@ -8,12 +8,12 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">TalentBridge Africa</h1>
-          <p className="text-sm text-gray-500 mt-1">HR Management Platform</p>
+          <h1 className="text-2xl font-bold text-gray-900">DSC-HRMS</h1>
+          <p className="text-sm text-gray-500 mt-1">District Service Commission Human Resource Management System</p>
         </div>
         <div className="card p-8 shadow-lg">{children}</div>
         <p className="text-center text-xs text-gray-400 mt-6">
-          © {new Date().getFullYear()} TalentBridge Africa. Built for East African businesses.
+          © {new Date().getFullYear()} DSC-HRMS. Built for Uganda local government human resource workflows.
         </p>
       </div>
     </div>

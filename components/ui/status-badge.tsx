@@ -1,8 +1,7 @@
 import { cn } from '@/lib/utils'
-import type { CandidateStatus, JobStatus } from '@prisma/client'
 import { CANDIDATE_STATUS_LABELS, CANDIDATE_STATUS_COLORS, JOB_STATUS_COLORS } from '@/types'
 
-export function CandidateStatusBadge({ status }: { status: CandidateStatus }) {
+export function CandidateStatusBadge({ status }: { status: string }) {
   return (
     <span className={cn('badge', CANDIDATE_STATUS_COLORS[status])}>
       {CANDIDATE_STATUS_LABELS[status]}
@@ -10,7 +9,7 @@ export function CandidateStatusBadge({ status }: { status: CandidateStatus }) {
   )
 }
 
-export function JobStatusBadge({ status }: { status: JobStatus }) {
+export function JobStatusBadge({ status }: { status: string }) {
   return (
     <span className={cn('badge', JOB_STATUS_COLORS[status])}>
       {status.charAt(0) + status.slice(1).toLowerCase()}

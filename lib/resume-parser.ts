@@ -32,7 +32,9 @@ export async function extractTextFromBuffer(
   if (mimeType === 'application/pdf') {
     try {
       // Dynamic import to avoid module resolution errors in edge runtimes
-      const pdfParse = (await import('pdf-parse')).default
+      const pdfModule = await import('pdf-parse')
+      const pdfParse = (pdfModule as unknown as { default?: (input: Buffer) => Promise<{ text?: string }> }).default
+        || (pdfModule as unknown as ((input: Buffer) => Promise<{ text?: string }>))
       const data = await pdfParse(buffer)
       return data.text || ''
     } catch {

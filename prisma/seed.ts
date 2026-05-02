@@ -1,5 +1,6 @@
 ﻿import { PrismaClient } from "@prisma/client"
 import bcrypt from "bcryptjs"
+import { seedDscHrms } from "./seed-dsc"
 
 const prisma = new PrismaClient()
 
@@ -230,7 +231,10 @@ async function main() {
     })
   }
 
+  await seedDscHrms(prisma, hash)
+
   console.log("Seed complete! Login: admin@demo.com / demo1234")
+  console.log("DSC-HRMS demo login: secretary.wakiso@dsc.go.ug / demo1234")
 }
 
 main().catch((e) => { console.error(e); process.exit(1) }).finally(() => prisma.$disconnect())

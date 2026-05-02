@@ -6,22 +6,30 @@ import { useSession } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, Briefcase, Users, UserCheck, ClipboardList,
-  BarChart3, MessageSquare, Building2, Settings, ChevronRight,
-  Mail, ShieldCheck, DollarSign,
+  BarChart3, ChevronRight, ShieldCheck, DollarSign, FileText,
+  Scale, Gavel, Landmark, ClipboardCheck, UserCog, Settings,
+  Radio, BadgeCheck, Calendar,
 } from 'lucide-react'
 
 const navItems = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Recruitment', href: '/recruitment/jobs', icon: Briefcase },
-  { label: 'Candidates', href: '/recruitment/candidates', icon: Users },
-  { label: 'Employees', href: '/employees', icon: UserCheck },
-  { label: 'Onboarding', href: '/onboarding', icon: ClipboardList },
-  { label: 'Performance', href: '/performance', icon: BarChart3 },
-  { label: 'Communications', href: '/communications', icon: Mail, adminOnly: true },
-  { label: 'Payroll Records', href: '/payroll', icon: DollarSign, adminOnly: true },
-  { label: 'Compliance', href: '/compliance', icon: ShieldCheck, adminOnly: true },
-  { label: 'Analytics', href: '/analytics', icon: BarChart3, adminOnly: true },
-  { label: 'AI Assistant', href: '/ai-assistant', icon: MessageSquare },
+  { label: 'Establishment & Vacancies', href: '/establishment-vacancies', icon: Landmark },
+  { label: 'Advertisements', href: '/advertisements', icon: Radio },
+  { label: 'Applications / PSC Form 3', href: '/applications', icon: FileText },
+  { label: 'Shortlisting', href: '/shortlisting', icon: ClipboardCheck },
+  { label: 'Interviews & Tests', href: '/interviews-tests', icon: Users },
+  { label: 'Verification', href: '/verification', icon: BadgeCheck },
+  { label: 'Appointment Letters', href: '/appointment-letters', icon: Briefcase },
+  { label: 'Onboarding & Oath', href: '/onboarding-oath', icon: ClipboardList },
+  { label: 'Probation', href: '/probation', icon: ShieldCheck },
+  { label: 'Employee Records', href: '/employee-records', icon: UserCheck },
+  { label: 'Leave', href: '/leave', icon: Calendar },
+  { label: 'Discipline & Grievance', href: '/discipline-grievance', icon: Gavel },
+  { label: 'Payroll Certification', href: '/payroll-certification', icon: DollarSign },
+  { label: 'Reports & Compliance', href: '/reports-compliance', icon: BarChart3 },
+  { label: 'Audit Log', href: '/audit-log', icon: Scale },
+  { label: 'Integrations', href: '/integrations', icon: UserCog },
+  { label: 'Settings / Reference Data', href: '/settings-reference-data', icon: Settings },
 ]
 
 interface SidebarProps {
@@ -31,7 +39,6 @@ interface SidebarProps {
 export default function Sidebar({ companyName }: SidebarProps) {
   const pathname = usePathname()
   const { data: session } = useSession()
-  const isAdmin = ['SUPER_ADMIN', 'COMPANY_ADMIN', 'HR_MANAGER'].includes(session?.user?.role || '')
 
   return (
     <aside className="w-64 bg-white border-r border-gray-200 flex flex-col min-h-screen fixed left-0 top-0 z-30">
@@ -42,17 +49,16 @@ export default function Sidebar({ companyName }: SidebarProps) {
             <Users className="w-5 h-5 text-white" />
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-bold text-gray-900 truncate">TalentBridge</p>
-            <p className="text-xs text-gray-400 truncate">{companyName || 'Africa'}</p>
+            <p className="text-sm font-bold text-gray-900 truncate">DSC-HRMS</p>
+            <p className="text-xs text-gray-400 truncate">{companyName || 'District Service Commission'}</p>
           </div>
         </div>
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 py-2 mt-1">Main Menu</p>
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 py-2 mt-1">Government HRMS</p>
         {navItems.map((item) => {
-          if (item.adminOnly && !isAdmin) return null
           const active = pathname === item.href || pathname.startsWith(item.href + '/')
           const Icon = item.icon
           return (
@@ -68,23 +74,6 @@ export default function Sidebar({ companyName }: SidebarProps) {
           )
         })}
 
-        {isAdmin && (
-          <>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 py-2 mt-4">Settings</p>
-            <Link href="/company/onboarding" className={cn(
-              pathname.startsWith('/company') ? 'sidebar-link-active' : 'sidebar-link'
-            )}>
-              <Building2 className="w-4.5 h-4.5" />
-              <span>Company Setup</span>
-            </Link>
-            <Link href="/settings" className={cn(
-              pathname === '/settings' ? 'sidebar-link-active' : 'sidebar-link'
-            )}>
-              <Settings className="w-4.5 h-4.5" />
-              <span>Settings</span>
-            </Link>
-          </>
-        )}
       </nav>
 
       {/* User info */}

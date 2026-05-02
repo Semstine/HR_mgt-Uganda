@@ -1,4 +1,27 @@
-export type UserRole = 'SUPER_ADMIN' | 'COMPANY_ADMIN' | 'HR_MANAGER' | 'HR_OFFICER' | 'DEPARTMENT_MANAGER' | 'SUPERVISOR' | 'EMPLOYEE' | 'CANDIDATE'
+export type DscRole =
+  | 'NATIONAL_ADMIN_MOPS'
+  | 'DSC_CHAIRPERSON'
+  | 'DSC_MEMBER'
+  | 'SECRETARY_DSC'
+  | 'CAO'
+  | 'DHRO'
+  | 'HOD'
+  | 'COOPTED_TECHNICAL_SPECIALIST'
+  | 'APPLICANT'
+  | 'DISTRICT_RECEPTION_CLERK'
+  | 'CIVIL_SERVICE_COLLEGE'
+  | 'AUDITOR_IGG'
+
+export type UserRole =
+  | 'SUPER_ADMIN'
+  | 'COMPANY_ADMIN'
+  | 'HR_MANAGER'
+  | 'HR_OFFICER'
+  | 'DEPARTMENT_MANAGER'
+  | 'SUPERVISOR'
+  | 'EMPLOYEE'
+  | 'CANDIDATE'
+  | DscRole
 export type JobStatus = 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'CLOSED'
 export type EmploymentType = 'FULL_TIME' | 'PART_TIME' | 'CONTRACT' | 'INTERNSHIP' | 'CONSULTANT'
 export type CandidateStatus = 'RECEIVED' | 'UNDER_REVIEW' | 'SHORTLISTED' | 'REJECTED' | 'PHONE_INTERVIEW_INVITED' | 'INTERVIEW_SCHEDULED' | 'FINAL_INTERVIEW' | 'OFFER_SENT' | 'OFFER_ACCEPTED' | 'ONBOARDING' | 'EMPLOYEE_ACTIVE' | 'ARCHIVED'
@@ -19,6 +42,8 @@ export interface SessionUser {
   email: string
   role: UserRole
   companyId: string | null
+  districtId?: string | null
+  dscRole?: DscRole | null
 }
 
 export interface ApiResponse<T = unknown> {
@@ -117,7 +142,7 @@ export interface PayrollExportRow {
   currency: string
 }
 
-export const CANDIDATE_STATUS_LABELS: Record<CandidateStatus, string> = {
+export const CANDIDATE_STATUS_LABELS: Record<string, string> = {
   RECEIVED: 'Received',
   UNDER_REVIEW: 'Under Review',
   SHORTLISTED: 'Shortlisted',
@@ -132,7 +157,7 @@ export const CANDIDATE_STATUS_LABELS: Record<CandidateStatus, string> = {
   ARCHIVED: 'Archived',
 }
 
-export const CANDIDATE_STATUS_COLORS: Record<CandidateStatus, string> = {
+export const CANDIDATE_STATUS_COLORS: Record<string, string> = {
   RECEIVED: 'bg-gray-100 text-gray-700',
   UNDER_REVIEW: 'bg-blue-100 text-blue-700',
   SHORTLISTED: 'bg-green-100 text-green-700',
@@ -147,14 +172,14 @@ export const CANDIDATE_STATUS_COLORS: Record<CandidateStatus, string> = {
   ARCHIVED: 'bg-gray-100 text-gray-500',
 }
 
-export const JOB_STATUS_COLORS: Record<JobStatus, string> = {
+export const JOB_STATUS_COLORS: Record<string, string> = {
   DRAFT: 'bg-gray-100 text-gray-600',
   ACTIVE: 'bg-green-100 text-green-700',
   PAUSED: 'bg-yellow-100 text-yellow-700',
   CLOSED: 'bg-red-100 text-red-700',
 }
 
-export const EMPLOYMENT_TYPE_LABELS: Record<EmploymentType, string> = {
+export const EMPLOYMENT_TYPE_LABELS: Record<string, string> = {
   FULL_TIME: 'Full Time',
   PART_TIME: 'Part Time',
   CONTRACT: 'Contract',

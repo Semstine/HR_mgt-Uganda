@@ -7,20 +7,28 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const session = await getSession()
   if (!session) redirect('/login')
 
-  let companyName: string | undefined
-  if (session.user.companyId) {
+  let organizationName: string | undefined
+  if (session.user.districtId) {
+    const district = await withRetry(() =>
+      prisma.district.findUnique({
+        where: { id: session.user.districtId! },
+        select: { name: true },
+      })
+    )
+    organizationName = district?.name
+  } else if (session.user.companyId) {
     const company = await withRetry(() =>
       prisma.company.findUnique({
         where: { id: session.user.companyId! },
         select: { name: true },
       })
     )
-    companyName = company?.name
+    organizationName = company?.name
   }
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <Sidebar companyName={companyName} />
+      <Sidebar companyName={organizationName} />
       <div className="flex-1 ml-64 flex flex-col min-h-screen">
         {children}
       </div>
