@@ -1,52 +1,74 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { requireDscApi } from '@/lib/dsc-rbac'
-import { createImmutableAuditEvent } from '@/lib/dsc-workflow'
+import { prisma, withRetry } from '@/lib/prisma'
+import { requireAuth } from '@/lib/auth'
+import { createAuditEvent } from '@/lib/dsc-workflow'
+
+export async function GET(req: NextRequest) {
+  try {
+    const session = await requireAuth()
+    const { searchParams } = new URL(req.url)
+    const districtId = searchParams.get('districtId') || session.user.districtId
+
+    const panels = await withRetry(() =>
+      prisma.shortlistingPanel.findMany({
+        where: { recruitmentCycle: { ...(districtId ? { districtId } : {}) } },
+        include: {
+          recruitmentCycle: { select: { id: true, postRef: true, postTitle: true, grade: true, department: true, districtId: true } },
+          panelMembers: true,
+          scores: { select: { id: true, applicationId: true, scorerId: true, overallResult: true, isSubmitted: true } },
+          decisions: {
+            include: { application: { select: { id: true, firstName: true, lastName: true, applicationRef: true } } },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      })
+    )
+    return NextResponse.json({ data: panels })
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 401 })
+  }
+}
 
 export async function POST(req: NextRequest) {
-  const body = await req.json()
-  const panel = await prisma.shortlistingPanel.findUnique({
-    where: { id: body.panelId },
-    include: { recruitmentCycle: true },
-  })
+  try {
+    const session = await requireAuth()
+    if (!['SECRETARY_DSC', 'NATIONAL_ADMIN_MOPS', 'SUPER_ADMIN'].includes(session.user.role)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+    const body = await req.json()
 
-  if (!panel) return NextResponse.json({ error: 'Shortlisting panel not found' }, { status: 404 })
-  const auth = await requireDscApi(req, ['SCORE_SHORTLIST'], panel.recruitmentCycle.districtId)
-  if ('error' in auth) return auth.error
+    const existing = await withRetry(() =>
+      prisma.shortlistingPanel.findUnique({ where: { recruitmentCycleId: body.cycleId } })
+    )
+    if (existing) return NextResponse.json({ error: 'A panel already exists for this cycle' }, { status: 409 })
 
-  const score = await prisma.shortlistingScore.upsert({
-    where: { panelId_applicationId_scorerId: { panelId: panel.id, applicationId: body.applicationId, scorerId: auth.context.userId } },
-    update: {
-      scores: body.scores,
-      overallResult: body.overallResult,
-      notes: body.notes || null,
-      isSubmitted: Boolean(body.submit),
-      submittedAt: body.submit ? new Date() : null,
-    },
-    create: {
-      panelId: panel.id,
-      applicationId: body.applicationId,
-      scorerId: auth.context.userId,
-      scores: body.scores,
-      overallResult: body.overallResult,
-      notes: body.notes || null,
-      isSubmitted: Boolean(body.submit),
-      submittedAt: body.submit ? new Date() : null,
-    },
-  })
+    const panel = await withRetry(() =>
+      prisma.shortlistingPanel.create({
+        data: {
+          recruitmentCycleId: body.cycleId,
+          createdBy: session.user.id,
+          status: 'open',
+          panelMembers: {
+            create: (body.memberIds as string[]).map((memberId: string, i: number) => ({
+              memberId,
+              memberRole: i === 0 ? 'dsc_chairperson' : i === 1 ? 'secretary' : 'dsc_member',
+            })),
+          },
+        },
+        include: { panelMembers: true },
+      })
+    )
 
-  await createImmutableAuditEvent({
-    prisma,
-    districtId: panel.recruitmentCycle.districtId,
-    recruitmentCycleId: panel.recruitmentCycleId,
-    actorId: auth.context.userId,
-    actorRole: auth.context.role,
-    action: body.submit ? 'submit_shortlisting_score' : 'save_shortlisting_score',
-    entityType: 'ShortlistingScore',
-    entityId: score.id,
-    afterState: score,
-    ipAddress: req.headers.get('x-forwarded-for'),
-  })
+    await createAuditEvent({
+      entityType: 'ShortlistingPanel',
+      entityId: panel.id,
+      action: 'SHORTLISTING_PANEL_CONSTITUTED',
+      actorId: session.user.id,
+      metadata: { cycleId: body.cycleId, memberCount: body.memberIds?.length },
+    })
 
-  return NextResponse.json({ score })
+    return NextResponse.json({ data: panel }, { status: 201 })
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 })
+  }
 }
