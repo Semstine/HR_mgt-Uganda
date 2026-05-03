@@ -1,6 +1,7 @@
 ﻿import { PrismaClient } from "@prisma/client"
 import bcrypt from "bcryptjs"
 import { seedDscHrms } from "./seed-dsc"
+import { seedDscExtended } from "./seed-dsc-extended"
 
 const prisma = new PrismaClient()
 
@@ -232,6 +233,16 @@ async function main() {
   }
 
   await seedDscHrms(prisma, hash)
+
+  const [wakiso, mbarara, kotido, secretary, chairperson, scale] = await Promise.all([
+    prisma.district.findUniqueOrThrow({ where: { code: 'WAK' } }),
+    prisma.district.findUniqueOrThrow({ where: { code: 'MBA' } }),
+    prisma.district.findUniqueOrThrow({ where: { code: 'KOT' } }),
+    prisma.user.findUniqueOrThrow({ where: { email: 'secretary.wakiso@dsc.go.ug' } }),
+    prisma.user.findUniqueOrThrow({ where: { email: 'chairperson.wakiso@dsc.go.ug' } }),
+    prisma.salaryScale.findFirstOrThrow({ where: { scaleCode: 'U5' } }),
+  ])
+  await seedDscExtended(prisma, { wakiso, mbarara, kotido, secretary, chairperson, salaryScaleId: scale.id })
 
   console.log("Seed complete! Login: admin@demo.com / demo1234")
   console.log("DSC-HRMS demo login: secretary.wakiso@dsc.go.ug / demo1234")
