@@ -14,11 +14,10 @@ export async function POST(req: Request, { params }: { params: { panelId: string
       prisma.shortlistingPanel.findUnique({ where: { id: params.panelId } })
     )
     if (!panel) return NextResponse.json({ error: 'Panel not found' }, { status: 404 })
-    if (panel.isLocked) return NextResponse.json({ error: 'Panel is locked — no more scores accepted' }, { status: 400 })
+    if (panel.lockedAt !== null) return NextResponse.json({ error: 'Panel is locked — no more scores accepted' }, { status: 400 })
 
     const body = await req.json()
 
-    // Upsert — member can revise until panel is locked
     const score = await withRetry(() =>
       prisma.shortlistingScore.upsert({
         where: {
@@ -29,25 +28,21 @@ export async function POST(req: Request, { params }: { params: { panelId: string
           },
         },
         update: {
-          academicScore: body.academicScore,
-          experienceScore: body.experienceScore,
-          trainingScore: body.trainingScore,
-          otherScore: body.otherScore,
-          totalScore: body.totalScore,
-          recommendation: body.recommendation,
-          comments: body.comments,
+          scores: body.scores,
+          overallResult: body.overallResult,
+          notes: body.notes,
+          isSubmitted: Boolean(body.submit),
+          submittedAt: body.submit ? new Date() : null,
         },
         create: {
           panelId: params.panelId,
           applicationId: body.applicationId,
           scorerId: session.user.id,
-          academicScore: body.academicScore,
-          experienceScore: body.experienceScore,
-          trainingScore: body.trainingScore,
-          otherScore: body.otherScore,
-          totalScore: body.totalScore,
-          recommendation: body.recommendation,
-          comments: body.comments,
+          scores: body.scores ?? {},
+          overallResult: body.overallResult,
+          notes: body.notes,
+          isSubmitted: Boolean(body.submit),
+          submittedAt: body.submit ? new Date() : null,
         },
       })
     )
@@ -57,7 +52,7 @@ export async function POST(req: Request, { params }: { params: { panelId: string
       entityId: score.id,
       action: 'SHORTLISTING_SCORE_SUBMITTED',
       actorId: session.user.id,
-      metadata: { panelId: params.panelId, applicationId: body.applicationId, total: body.totalScore },
+      metadata: { panelId: params.panelId, applicationId: body.applicationId },
     })
 
     return NextResponse.json({ data: score })

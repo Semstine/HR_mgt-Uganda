@@ -11,15 +11,15 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
         where: { id: params.id },
         include: {
           district: true,
-          vacancy: { include: { department: true, staffStructure: { include: { salaryScale: true } } } },
+          vacancyDeclaration: true,
           workflowSteps: { orderBy: { stepNumber: 'asc' } },
-          adverts: { orderBy: { createdAt: 'desc' } },
+          advert: true,
           applications: {
             include: { shortlistingScores: true },
             orderBy: { submittedAt: 'asc' },
           },
-          shortlistingPanels: { include: { members: true } },
-          interviewPanels: { include: { members: true, schedules: true } },
+          shortlistingPanel: { include: { panelMembers: true } },
+          interviewPanel: { include: { panelMembers: true, schedules: true } },
           appointmentDecisions: true,
         },
       })

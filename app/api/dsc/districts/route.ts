@@ -8,7 +8,7 @@ export async function GET() {
     const districts = await withRetry(() =>
       prisma.district.findMany({
         include: {
-          districtServiceCommission: true,
+          dsc: true,
           _count: { select: { departments: true, users: true } },
         },
         orderBy: { name: 'asc' },
@@ -33,8 +33,8 @@ export async function POST(req: Request) {
           name: body.name,
           region: body.region,
           code: body.code,
-          population: body.population,
-          hqAddress: body.hqAddress,
+          districtType: body.districtType || 'district',
+          headquarters: body.headquarters || body.name,
         },
       })
     )

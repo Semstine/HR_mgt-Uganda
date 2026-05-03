@@ -59,6 +59,8 @@ async function s3Upload(
 ): Promise<UploadResult> {
   // To activate: npm install @aws-sdk/client-s3 @aws-sdk/s3-request-presigner
   // Then replace this stub with real S3PutObjectCommand calls
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore — optional peer dep, only needed when STORAGE_PROVIDER=s3
   const { S3Client, PutObjectCommand } = await import('@aws-sdk/client-s3').catch(() => {
     throw new Error('Install @aws-sdk/client-s3 to use S3 storage')
   })
@@ -71,9 +73,12 @@ async function s3Upload(
 }
 
 async function s3GetSignedUrl(key: string, expiresInSeconds: number): Promise<SignedUrlResult> {
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore — optional peer dep, only needed when STORAGE_PROVIDER=s3
   const { S3Client, GetObjectCommand } = await import('@aws-sdk/client-s3').catch(() => {
     throw new Error('Install @aws-sdk/client-s3 to use S3 storage')
   })
+  // @ts-ignore — optional peer dep
   const { getSignedUrl } = await import('@aws-sdk/s3-request-presigner').catch(() => {
     throw new Error('Install @aws-sdk/s3-request-presigner to use S3 signed URLs')
   })

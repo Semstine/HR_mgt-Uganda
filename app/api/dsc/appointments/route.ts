@@ -64,7 +64,6 @@ export async function POST(req: Request) {
           reportingOfficer: body.reportingOfficer,
           effectiveDate: body.effectiveDate ? new Date(body.effectiveDate) : undefined,
           decidedBy: session.user.id,
-          notes: body.notes,
         },
       })
     )

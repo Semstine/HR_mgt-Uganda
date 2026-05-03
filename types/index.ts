@@ -230,6 +230,22 @@ export const CONTRACT_TYPE_LABELS: Record<ContractType, string> = {
   probationary: 'Probationary',
 }
 
+export const VACANCY_REASONS: Record<string, string> = {
+  new_post: 'New Post (Approved)',
+  retirement: 'Retirement',
+  resignation: 'Resignation',
+  death: 'Death in Service',
+  dismissal: 'Dismissal',
+  transfer: 'Inter-district Transfer',
+  promotion: 'Promotion',
+  contract_end: 'End of Contract',
+}
+
+export const SALARY_SCALES: string[] = [
+  'U1 (Superscale)', 'U2', 'U3', 'U4', 'U5', 'U6', 'U7', 'U8',
+  'LG 1', 'LG 2', 'LG 3', 'LG 4', 'LG 5', 'LG 6', 'LG 7', 'LG 8',
+]
+
 export const DEFAULT_ONBOARDING_TASKS: OnboardingTask[] = [
   { id: 'personal_info', title: 'Personal Information Form', description: 'Complete personal details, contact info, and next of kin', category: 'Documentation', required: true, completed: false },
   { id: 'emergency_contact', title: 'Emergency Contact', description: 'Provide emergency contact details', category: 'Documentation', required: true, completed: false },
